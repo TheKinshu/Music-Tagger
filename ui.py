@@ -1,9 +1,7 @@
-from pprint import pprint
 from tkinter import *
-import os
-from typing import NoReturn
 from download import Download as d
 from musicTag import MusicTag as tg
+import os, pyperclip
 
 LABELFONT = ("Serif", 10, "bold")
 NORMALFONT = ("Serif", 10, "normal")
@@ -18,7 +16,11 @@ class UI():
         self.window.title('Music Download/Tagger')
         self.window.minsize(width=600, height=620)
         self.window.maxsize(width=600, height=620)
+        
+        self.menu_option = Menu(self.window, tearoff=False)
+        self.menu_option.add_command(label="Paste", command=self.paste_link)
 
+    
         self.canvas = Canvas(width=600, height=620)
         self.canvas.grid(column=0,row=0, columnspan=2)
 
@@ -33,16 +35,32 @@ class UI():
         self.year_label = self.canvas.create_text(210, 460, text="Year:", anchor="nw", font=NORMALFONT)
         self.Genre_label = self.canvas.create_text(400, 460, text="Genre:", anchor="nw", font=NORMALFONT)
 
+        self.vid_checked = IntVar()
+        self.delete_vid = Checkbutton(text="Delete mp4 ('Check to delete')", variable=self.vid_checked, command=self.check_delete)
+        self.canvas_delete = self.canvas.create_window(20, 5, anchor="nw", window=self.delete_vid)
+
+        self.options = [
+            '360p',
+            '720p',
+            '1080p'  
+        ]
+
+        self.variable = StringVar(self.window)
+        self.variable.set(self.options[0])
+        self.resolution_menu = OptionMenu(self.window, self.variable, *self.options)
+        self.canvas_res = self.canvas.create_window(250,3, anchor="nw", window=self.resolution_menu)
+
         self.radio_state = IntVar()
         self.link_radiobtn = Radiobutton(text="Link", value=0, variable=self.radio_state, command=self.purpose_selection)
-        self.canvas_link = self.canvas.create_window(20,5, anchor="nw", window=self.link_radiobtn)
+        self.canvas_link = self.canvas.create_window(20,33, anchor="nw", window=self.link_radiobtn)
 
         self.playlist_radiobtn = Radiobutton(text="Playlist", value=1, variable=self.radio_state, command=self.purpose_selection)
-        self.canvas_playlist = self.canvas.create_window(100,5, anchor="nw", window=self.playlist_radiobtn)
-
+        self.canvas_playlist = self.canvas.create_window(100,33, anchor="nw", window=self.playlist_radiobtn)
 
         self.link_entry = Entry(width=35)
-        self.canvas_link_entry = self.canvas.create_window(200, 7, anchor="nw", window=self.link_entry)
+        self.canvas_link_entry = self.canvas.create_window(200, 35, anchor="nw", window=self.link_entry)
+        self.link_entry.bind("<Button-3>", self.pop_menu)
+
 
         self.tag_title_entry = Entry(width=30)
         self.canvas_title_entry = self.canvas.create_window(20, 430, anchor="nw", window=self.tag_title_entry)
@@ -66,7 +84,7 @@ class UI():
         self.canvas_save_button = self.canvas.create_window(20, 520, anchor="nw", window=self.save_button)
 
         self.download_button = Button(text="Download", width=20, command=self.download)
-        self.canvas_download_button = self.canvas.create_window(590, 4, anchor="ne", window=self.download_button)
+        self.canvas_download_button = self.canvas.create_window(590, 32, anchor="ne", window=self.download_button)
 
         self.current_download_list = Listbox(height=18, width=30, exportselection=0)
         self.songs = (os.listdir("Downloads/"))
@@ -88,6 +106,15 @@ class UI():
 
     def purpose_selection(self):
         print(self.radio_state.get())
+
+    def pop_menu(self, e):
+        self.menu_option.tk_popup(e.x_root, e.y_root)
+
+    def check_delete(self):
+        pass
+
+    def paste_link(self):
+        self.link_entry.insert(0, pyperclip.paste())
 
     def updates(self, message):
         self.update_box.config(state=NORMAL)
@@ -113,6 +140,7 @@ class UI():
                 self.updates("This video/audio is unavailable for access!")
         else:
             self.updates("Please enter a link!")
+
     def save(self):
         selected = self.current_download_list.curselection()
 
@@ -132,7 +160,11 @@ class UI():
         genre = self.tag_genre_entry.get()
 
         if selected and not title == "":
-            selected_info = self.results[self.current_download_list.curselection()[0]]
+            print(self.results)
+            if self.similar_song_list.curselection():
+                selected_info = self.results[self.similar_song_list.curselection()[0]]
+            else:
+                selected_info = None
             new_info = {
                 'Title': title,
                 'Year': year,

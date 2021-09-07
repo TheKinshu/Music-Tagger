@@ -4,3 +4,4 @@ Converting.py
 discogs.py
 musicTags1.py
 musicTagsMulti.py
+__pycache__/*

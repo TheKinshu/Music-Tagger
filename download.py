@@ -1,12 +1,12 @@
 from pytube import YouTube
 from pytube.exceptions import VideoUnavailable
-from moviepy.editor import *
+from moviepy.video.io.VideoFileClip import VideoFileClip
 
 import requests, os
 
 class Download():
     def __init__(self, URL) -> None:
-        self.download_location = "Downloads/"
+        self.download_location = "./Downloads/"
         self.yt = YouTube(URL)
         self.music_title = ""
         self.thumbnail_url = ""
@@ -42,7 +42,7 @@ class Download():
 
             print("Downloading Video please wait......")
             
-            stream = self.yt.streams.filter(file_extension='mp4').first()
+            stream = self.yt.streams.filter(file_extension='mp4', only_audio=True).first()
             stream.download(self.download_location)
             
             print("Download complete!")
@@ -57,7 +57,7 @@ class Download():
             video = VideoFileClip(location)
             video.audio.write_audiofile("{}/{}.mp3".format(self.download_location, self.music_title))
             video.close()
-            print("Convert complete!")
+            print("Conversion complete!")
 
             # Remove mp4 file after convert
             print("Removing mp4 file...")

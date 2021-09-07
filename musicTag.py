@@ -1,4 +1,4 @@
-import requests, eyed3, pprint
+import requests, eyed3
 
 class MusicTag():
     def __init__(self, title = None) -> None:
@@ -61,7 +61,6 @@ class MusicTag():
 
     def tagInfo(self, detail):
         audiofile = eyed3.load("Downloads/{}".format(self.title))
-
         audiofile.tag.title = detail["Title"]
         audiofile.tag.album_artist = detail["Artist"]
         audiofile.tag.album = detail["Album"]
