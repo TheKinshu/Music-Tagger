@@ -5,3 +5,5 @@ discogs.py
 musicTags1.py
 musicTagsMulti.py
 __pycache__/*
+testing.py
+*.mp4

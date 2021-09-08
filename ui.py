@@ -25,7 +25,7 @@ class UI():
         self.canvas.grid(column=0,row=0, columnspan=2)
 
         self.music_list_label = self.canvas.create_text(20, 60, text="Downloaded Music:", anchor="nw", font=NORMALFONT)
-        self.similar_list_label = self.canvas.create_text(483, 60, text="Return results:", anchor="ne", font=NORMALFONT)
+        self.similar_list_label = self.canvas.create_text(393, 60, text="Return results:", anchor="ne", font=NORMALFONT)
         # All the tags label
         self.tag_label =  self.canvas.create_text(20, 380, text="Tags:", anchor="nw", font=LABELFONT)
         self.title_label = self.canvas.create_text(20, 410, text="Title:", anchor="nw", font=NORMALFONT)
@@ -35,14 +35,13 @@ class UI():
         self.year_label = self.canvas.create_text(210, 460, text="Year:", anchor="nw", font=NORMALFONT)
         self.Genre_label = self.canvas.create_text(400, 460, text="Genre:", anchor="nw", font=NORMALFONT)
 
-        self.vid_checked = IntVar()
-        self.delete_vid = Checkbutton(text="Delete mp4 ('Check to delete')", variable=self.vid_checked, command=self.check_delete)
+        self.vid_checked = IntVar(value=1)
+        self.delete_vid = Checkbutton(text="Delete mp4 ('Check to delete')", variable=self.vid_checked)
         self.canvas_delete = self.canvas.create_window(20, 5, anchor="nw", window=self.delete_vid)
 
         self.options = [
             '360p',
-            '720p',
-            '1080p'  
+            '720p' 
         ]
 
         self.variable = StringVar(self.window)
@@ -51,10 +50,10 @@ class UI():
         self.canvas_res = self.canvas.create_window(250,3, anchor="nw", window=self.resolution_menu)
 
         self.radio_state = IntVar()
-        self.link_radiobtn = Radiobutton(text="Link", value=0, variable=self.radio_state, command=self.purpose_selection)
+        self.link_radiobtn = Radiobutton(text="Link", value=0, variable=self.radio_state)
         self.canvas_link = self.canvas.create_window(20,33, anchor="nw", window=self.link_radiobtn)
 
-        self.playlist_radiobtn = Radiobutton(text="Playlist", value=1, variable=self.radio_state, command=self.purpose_selection)
+        self.playlist_radiobtn = Radiobutton(text="Playlist", value=1, variable=self.radio_state)
         self.canvas_playlist = self.canvas.create_window(100,33, anchor="nw", window=self.playlist_radiobtn)
 
         self.link_entry = Entry(width=35)
@@ -86,7 +85,7 @@ class UI():
         self.download_button = Button(text="Download", width=20, command=self.download)
         self.canvas_download_button = self.canvas.create_window(590, 32, anchor="ne", window=self.download_button)
 
-        self.current_download_list = Listbox(height=18, width=30, exportselection=0)
+        self.current_download_list = Listbox(height=18, width=45, exportselection=0)
         self.songs = (os.listdir("Downloads/"))
         for song in self.songs:
             self.current_download_list.insert(self.songs.index(song), song)
@@ -94,7 +93,7 @@ class UI():
         self.current_download_list.bind("<<ListboxSelect>>", self.song_selection)
         self.canvas_download_list = self.canvas.create_window(20, 80, anchor="nw", window=self.current_download_list)
 
-        self.similar_song_list = Listbox(height=18, width=30, exportselection=0)
+        self.similar_song_list = Listbox(height=18, width=45, exportselection=0)
         self.similar_song_list.insert(0, "No Information")
         self.similar_song_list.bind("<<ListboxSelect>>", self.song_detail_selection)
         self.canvas_songs_list = self.canvas.create_window(580,80, anchor="ne", window=self.similar_song_list)
@@ -104,14 +103,8 @@ class UI():
         self.canvas_update = self.canvas.create_window(20, 550, anchor="nw", window=self.update_box)
         self.window.mainloop()
 
-    def purpose_selection(self):
-        print(self.radio_state.get())
-
     def pop_menu(self, e):
         self.menu_option.tk_popup(e.x_root, e.y_root)
-
-    def check_delete(self):
-        pass
 
     def paste_link(self):
         self.link_entry.insert(0, pyperclip.paste())
@@ -123,23 +116,42 @@ class UI():
         self.update_box.see(END)
 
     def download(self):
+        # Grab url from entry
         url = self.link_entry.get()
         if not url == "":
-            dload = d(url)
-            status = dload.download_link()
-            if not status == 0:
-                self.updates("Download completed and converted")
-                # Update downloaded list after downloading
-                new_list = (os.listdir("Downloads/"))
-                for song in new_list:
-                    if song not in self.songs:
-                        self.current_download_list.insert(new_list.index(song), song)
-                        self.songs = new_list
+            # Check if user click link or playlist
+            if not self.radio_state.get() and (not "list" in url):
+                dload = d(URL=url)
                 self.link_entry.delete(0, END)
+                status = dload.download_link(self.vid_checked.get(), self.variable.get())
+                if not status == 0:
+                    self.updates("Download completed and converted")
+                    self.update_download()
+                else:
+                    self.updates("This video/audio is unavailable for access!")
+            # If user click playlist
+            elif self.radio_state.get() and ("list" in url):
+                dload = d(playlist=url)
+                self.link_entry.delete(0, END)
+                status = dload.download_playlist(self.vid_checked.get(), self.variable.get())
+                if not status == 0:
+                    self.updates("Download completed and converted")
+                    self.update_download()
+                else:
+                    self.updates("This video/audio is unavailable for access!")
             else:
-                self.updates("This video/audio is unavailable for access!")
+                self.updates("Check the link and make sure you have selected the right one (Link or Playlist)")
         else:
             self.updates("Please enter a link!")
+            
+    def update_download(self):
+        # Update downloaded list after downloading
+        new_list = (os.listdir("./Downloads/"))
+        for song in new_list:
+            if song not in self.songs:
+                self.current_download_list.insert(new_list.index(song), song)
+                self.songs = new_list
+
 
     def save(self):
         selected = self.current_download_list.curselection()
@@ -160,7 +172,6 @@ class UI():
         genre = self.tag_genre_entry.get()
 
         if selected and not title == "":
-            print(self.results)
             if self.similar_song_list.curselection():
                 selected_info = self.results[self.similar_song_list.curselection()[0]]
             else:
@@ -180,7 +191,7 @@ class UI():
                 tg(self.title).tagInfo(selected_info)
             else:
                 tg(self.title).tagInfo(new_info)
-        #print(self.results[self.similar_song_list.curselection()[0]])
+
     def song_detail_selection(self, event):
         if not self.similar_song_list.get(self.similar_song_list.curselection()) == "No Information":
             information = self.results[self.similar_song_list.curselection()[0]]
