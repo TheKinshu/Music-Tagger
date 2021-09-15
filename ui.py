@@ -133,12 +133,12 @@ class UI():
             elif self.radio_state.get() and ("list" in url):
                 dload = d(playlist=url)
                 self.link_entry.delete(0, END)
-                status = dload.download_playlist(self.vid_checked.get(), self.variable.get())
-                if not status == 0:
-                    self.updates("Download completed and converted")
-                    self.update_download()
-                else:
-                    self.updates("This video/audio is unavailable for access!")
+                dload.download_playlist(self.vid_checked.get(), self.variable.get())
+                self.updates("Download completed and converted")
+                self.update_download()
+                if dload.fail_count > 0:
+                    self.updates("{} of the videos/audios were not accessible or was not able to be converted!".format(dload.fail_count))
+                    print(dload.failed_songs)
             else:
                 self.updates("Check the link and make sure you have selected the right one (Link or Playlist)")
         else:

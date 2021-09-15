@@ -64,7 +64,6 @@ class MusicTag():
         audiofile.tag.title = detail["Title"]
         audiofile.tag.album_artist = detail["Artist"]
         audiofile.tag.album = detail["Album"]
-
         if not len(detail["Contributing"]) > 1:
             audiofile.tag.artist = detail["Artist"]
         else:

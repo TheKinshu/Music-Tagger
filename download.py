@@ -13,11 +13,13 @@ class Download():
             self.yt_playlist = Playlist(playlist)
         self.music_title = ""
         self.thumbnail_url = ""
-        self.regex = ['/', '\\', '?', '<', '>', '?', '*', '"', '|', ':', '.', ',', "'", '#']
+        self.regex = ['/', '\\', '?', '<', '>', '?', '*', '"', '|', ':', '.', ',', "'", '#', '$', ';']
+        self.failed_songs = []
+        self.fail_count = 0
     
-    def download_playlist(self, should_delete, resolution):
-        try:
-            for video in self.yt_playlist.videos:
+    def download_playlist(self, should_delete, resolution="360p"):
+        for video in self.yt_playlist.videos:
+            try:
                 self.music_title = video.title
                 self.thumbnail_url = video.thumbnail_url
 
@@ -29,25 +31,20 @@ class Download():
 
                 self.download_thumbnail()
 
-                if should_delete:
-                    stream = video.streams.filter(file_extension='mp4').first()
-                    stream.download(self.download_location)
-                else:
-                    stream = video.streams.filter(file_extension='mp4', res=resolution).first()
-                    stream.download(self.download_location)
+                stream = video.streams.filter(file_extension='mp4', res=resolution).first()
+                stream.download(self.download_location)
 
                 # Location of mp4 
                 location = "{}{}".format(self.download_location, self.music_title)
-                
-                self.convert_video(location)
-                
-                if should_delete: 
-                    self.delete_video("{}.mp4".format(location))
+                    
+                self.convert_video(location, should_delete)
+                    
+            except VideoUnavailable:
+                self.fail_count += 1
+                self.failed_songs.append(self.music_title)
+                continue
 
-        except VideoUnavailable:
-            return 0
-
-    def download_link(self, should_delete, resolution):
+    def download_link(self, should_delete, resolution="360p"):
         try:
             #print("Finding Video....")
             self.music_title = self.yt.title
@@ -62,21 +59,14 @@ class Download():
             self.download_thumbnail()
 
             #print("Downloading Video please wait......")
-            if should_delete:
-                stream = self.yt.streams.filter(file_extension='mp4').first()
-                stream.download(self.download_location)
-            else:
-                stream = self.yt.streams.filter(file_extension='mp4', res=resolution).first()
-                stream.download(self.download_location)
+            stream = self.yt.streams.filter(file_extension='mp4', res=resolution).first()
+            stream.download(self.download_location)
             #print("Download complete!")
 
             # Location of mp4 
             location = "{}{}".format(self.download_location, self.music_title)
             
-            self.convert_video(location)
-            
-            if should_delete: 
-                self.delete_video("{}.mp4".format(location))
+            self.convert_video(location, should_delete)
 
         except VideoUnavailable:
             return 0
@@ -91,12 +81,19 @@ class Download():
                     break
                 handle.write(block)
 
-    def convert_video(self, location):
+    def convert_video(self, location, should_delete):
         # Convert video to audio
         #print("Converting audio....")
-        video = VideoFileClip("{}.mp4".format(location))
-        video.audio.write_audiofile("{}/{}.mp3".format(self.download_location, self.music_title))
-        video.close()
+        try:
+            video = VideoFileClip("{}.mp4".format(location))
+            video.audio.write_audiofile("{}/{}.mp3".format(self.download_location, self.music_title))
+            video.close()
+        except OSError:
+            self.fail_count += 1
+            self.failed_songs.append(self.music_title)
+        finally:
+            if should_delete: 
+                self.delete_video("{}.mp4".format(location))
         #print("Conversion complete!") 
 
 

@@ -4,6 +4,12 @@ Converting.py
 discogs.py
 musicTags1.py
 musicTagsMulti.py
-__pycache__/*
+__pycache__/
 testing.py
 *.mp4
+*.rar
+*.mp3
+You-Down2.0/
+build/
+*.spec
+*.txt
