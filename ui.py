@@ -1,4 +1,7 @@
-from tkinter import *
+from tkinter import Menu, Tk, Canvas
+from tkinter import IntVar, StringVar, DISABLED, END, NORMAL
+from tkinter import Checkbutton, Radiobutton, Entry, Button, Listbox, Text, OptionMenu
+
 from download import Download as d
 from musicTag import MusicTag as tg
 import os, pyperclip
@@ -86,7 +89,7 @@ class UI():
         self.canvas_download_button = self.canvas.create_window(590, 32, anchor="ne", window=self.download_button)
 
         self.current_download_list = Listbox(height=18, width=45, exportselection=0)
-        self.songs = (os.listdir("Downloads/"))
+        self.songs = [f for f in os.listdir("Downloads/") if f.endswith(".mp3")]
         for song in self.songs:
             self.current_download_list.insert(self.songs.index(song), song)
 
@@ -146,11 +149,11 @@ class UI():
             
     def update_download(self):
         # Update downloaded list after downloading
-        new_list = (os.listdir("./Downloads/"))
+        new_list = [f for f in os.listdir("Downloads/") if f.endswith(".mp3")]
         for song in new_list:
             if song not in self.songs:
                 self.current_download_list.insert(new_list.index(song), song)
-                self.songs = new_list
+                self.songs.append(song)
 
 
     def save(self):
