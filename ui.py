@@ -4,6 +4,7 @@ from tkinter import Checkbutton, Radiobutton, Entry, Button, Listbox, Text, Opti
 
 from download import Download as d
 from musicTag import MusicTag as tg
+from lyric import Lyric as l
 import os, pyperclip
 
 LABELFONT = ("Serif", 10, "bold")
@@ -29,6 +30,7 @@ class UI():
 
         self.music_list_label = self.canvas.create_text(20, 60, text="Downloaded Music:", anchor="nw", font=NORMALFONT)
         self.similar_list_label = self.canvas.create_text(393, 60, text="Return results:", anchor="ne", font=NORMALFONT)
+        
         # All the tags label
         self.tag_label =  self.canvas.create_text(20, 380, text="Tags:", anchor="nw", font=LABELFONT)
         self.title_label = self.canvas.create_text(20, 410, text="Title:", anchor="nw", font=NORMALFONT)
@@ -37,6 +39,7 @@ class UI():
         self.album_label = self.canvas.create_text(20, 460, text="Album:", anchor="nw", font=NORMALFONT)
         self.year_label = self.canvas.create_text(210, 460, text="Year:", anchor="nw", font=NORMALFONT)
         self.Genre_label = self.canvas.create_text(400, 460, text="Genre:", anchor="nw", font=NORMALFONT)
+        self.lyric_label = self.canvas.create_text(340, 200, text="Lyric:", anchor="ne", font=NORMALFONT)
 
         self.vid_checked = IntVar(value=1)
         self.delete_vid = Checkbutton(text="Delete mp4 ('Check to delete')", variable=self.vid_checked)
@@ -62,7 +65,6 @@ class UI():
         self.link_entry = Entry(width=35)
         self.canvas_link_entry = self.canvas.create_window(200, 35, anchor="nw", window=self.link_entry)
         self.link_entry.bind("<Button-3>", self.pop_menu)
-
 
         self.tag_title_entry = Entry(width=30)
         self.canvas_title_entry = self.canvas.create_window(20, 430, anchor="nw", window=self.tag_title_entry)
@@ -96,15 +98,20 @@ class UI():
         self.current_download_list.bind("<<ListboxSelect>>", self.song_selection)
         self.canvas_download_list = self.canvas.create_window(20, 80, anchor="nw", window=self.current_download_list)
 
-        self.similar_song_list = Listbox(height=18, width=45, exportselection=0)
+        self.similar_song_list = Listbox(height=7, width=45, exportselection=0)
         self.similar_song_list.insert(0, "No Information")
         self.similar_song_list.bind("<<ListboxSelect>>", self.song_detail_selection)
         self.canvas_songs_list = self.canvas.create_window(580,80, anchor="ne", window=self.similar_song_list)
+
+        self.lyric_box = Text(height=9, width=34)
+        self.lyric_box.config(state=DISABLED)
+        self.canvas_lyric = self.canvas.create_window(581, 223, anchor="ne", window=self.lyric_box)
 
         self.update_box = Text(height=3, width=70)
         self.update_box.config(state=DISABLED)
         self.canvas_update = self.canvas.create_window(20, 550, anchor="nw", window=self.update_box)
         self.window.update_idletasks()
+
         self.window.mainloop()
 
     def pop_menu(self, e):
@@ -202,17 +209,22 @@ class UI():
     def song_detail_selection(self, event):
         if not self.similar_song_list.get(self.similar_song_list.curselection()) == "No Information":
             information = self.results[self.similar_song_list.curselection()[0]]
+            lyrics = l("{} {}".format(information['Title'],information['Artist'])).find_lyrics()
             self.delete_info()
-            self.add_info(information)
+            self.add_info(information, lyrics)
 
         
-    def add_info(self, details):
+    def add_info(self, details, lyric):
         self.tag_title_entry.insert(0,details['Title'])
         self.tag_artist_entry.insert(0,details['Artist'])
         self.tag_contribute_entry.insert(0,", ".join(details['Contributing']))
         self.tag_album_entry.insert(0,details['Album'])
         self.tag_year_entry.insert(0,details['Year'])
         self.tag_genre_entry.insert(0,details['Genre'])
+        self.lyric_box.config(state=NORMAL)
+        self.lyric_box.delete('1.0', END)
+        self.lyric_box.insert(END, "{}".format(lyric))
+        self.lyric_box.config(state=DISABLED)
     
     def delete_info(self):
         self.tag_title_entry.delete(0,END)
@@ -221,6 +233,7 @@ class UI():
         self.tag_album_entry.delete(0,END)
         self.tag_year_entry.delete(0,END)
         self.tag_genre_entry.delete(0,END)
+        self.lyric_box.delete(0,END)
 
     def song_selection(self, event):
         self.similar_song_list.delete(0,END)
