@@ -1,15 +1,16 @@
 import requests, eyed3
 
 class MusicTag():
+    #
     def __init__(self, title = None) -> None:
         self.title = title
         self.musicbrainz_endpoint = "https://musicbrainz.org/ws/2/release-group/?limit=5&fmt=json&query="
         self.headers = {    'Content-Type': 'application/json',
-                            "Authorization": "Discogs key=iHapHFWrGICnxGCBKPHN, secret=RNwLATtucoobdJfWgUmPURUJluESjDEG"
+                            "Authorization": "Discogs key=FIvcpCrDXyemGBiyfJdj, secret=xovpybPirVGpuCfDlOFLhuiklCIoklpz"
         }
         self.music = []
         self.songs = []
-
+    #
     def search(self):
         music_reponse = requests.get(self.musicbrainz_endpoint+"{}".format(self.title))
         music_reponse.raise_for_status()
@@ -56,9 +57,8 @@ class MusicTag():
             self.music.append(music_details)
 
         return self.music
-
-
-
+        
+    #
     def tagInfo(self, detail):
         audiofile = eyed3.load("Downloads/{}".format(self.title))
         audiofile.tag.title = detail["Title"]

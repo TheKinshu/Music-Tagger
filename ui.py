@@ -104,6 +104,7 @@ class UI():
         self.update_box = Text(height=3, width=70)
         self.update_box.config(state=DISABLED)
         self.canvas_update = self.canvas.create_window(20, 550, anchor="nw", window=self.update_box)
+        self.window.update_idletasks()
         self.window.mainloop()
 
     def pop_menu(self, e):
@@ -124,7 +125,7 @@ class UI():
         if not url == "":
             # Check if user click link or playlist
             if not self.radio_state.get() and (not "list" in url):
-                dload = d(URL=url)
+                dload = d(URL=url,window=self.window)
                 self.link_entry.delete(0, END)
                 status = dload.download_link(self.vid_checked.get(), self.variable.get())
                 if not status == 0:
@@ -134,7 +135,7 @@ class UI():
                     self.updates("This video/audio is unavailable for access!")
             # If user click playlist
             elif self.radio_state.get() and ("list" in url):
-                dload = d(playlist=url)
+                dload = d(playlist=url,window=self.window)
                 self.link_entry.delete(0, END)
                 dload.download_playlist(self.vid_checked.get(), self.variable.get())
                 self.updates("Download completed and converted")
@@ -146,7 +147,10 @@ class UI():
                 self.updates("Check the link and make sure you have selected the right one (Link or Playlist)")
         else:
             self.updates("Please enter a link!")
-            
+    
+    def update_UI(self):
+        self.window.update()
+
     def update_download(self):
         # Update downloaded list after downloading
         new_list = [f for f in os.listdir("Downloads/") if f.endswith(".mp3")]

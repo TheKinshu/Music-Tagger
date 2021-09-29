@@ -1,14 +1,17 @@
-from pytube import YouTube, Playlist
+from pytube import YouTube, Playlist, cli
 from pytube.exceptions import VideoUnavailable
 from moviepy.video.io.VideoFileClip import VideoFileClip
-
-import requests, os
+import requests, os, logging as log
 
 class Download():
-    def __init__(self, URL=None, playlist=None) -> None:
+    # 
+    def __init__(self, URL=None, playlist=None, window=None) -> None:
+
+        log.basicConfig(filename='debug.log', level=log.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+        self.window = window
         self.download_location = "./Downloads/"
         if not URL == None:
-            self.yt = YouTube(URL)
+            self.yt = YouTube(URL, on_progress_callback=cli.on_progress)
         if not playlist == None:
             self.yt_playlist = Playlist(playlist)
         self.music_title = ""
@@ -16,7 +19,7 @@ class Download():
         self.regex = ['/', '\\', '?', '<', '>', '?', '*', '"', '|', ':', '.', ',', "'", '#', '$', ';']
         self.failed_songs = []
         self.fail_count = 0
-    
+    #
     def download_playlist(self, should_delete, resolution="360p"):
         for video in self.yt_playlist.videos:
             try:
@@ -26,7 +29,7 @@ class Download():
                 # Find all the character not allow for file naming
                 for i in self.regex:
                     if i in self.music_title:
-                        #print("{} character has been found in the title and is being deleted!".format(i))
+                        log.debug("{} character has been found in the title and is being deleted!".format(i))
                         self.music_title = self.music_title.replace(i, "")
 
                 self.download_thumbnail()
@@ -43,26 +46,27 @@ class Download():
                 self.fail_count += 1
                 self.failed_songs.append(self.music_title)
                 continue
-
+    #
     def download_link(self, should_delete, resolution="360p"):
         try:
-            #print("Finding Video....")
+            log.debug("Finding Video....")
             self.music_title = self.yt.title
             self.thumbnail_url = self.yt.thumbnail_url
-            #print("Video Found!")
-
+            log.debug("Video Found!")
+    
             # Find all the character not allow for file naming
             for i in self.regex:
                 if i in self.music_title:
-                    #print("{} character has been found in the title and is being deleted!".format(i))
+                    log.debug("{} character has been found in the title and is being deleted!".format(i))
                     self.music_title = self.music_title.replace(i, "")
             self.download_thumbnail()
-
-            #print("Downloading Video please wait......")
+            self.window.update()
+            log.debug("Downloading Video please wait......")
             stream = self.yt.streams.filter(file_extension='mp4', res=resolution).first()
             stream.download(self.download_location)
-            #print("Download complete!")
-
+            self.window.update()
+    
+            log.debug("Download complete!")
             # Location of mp4 
             location = "{}{}".format(self.download_location, self.music_title)
             
@@ -70,7 +74,7 @@ class Download():
 
         except VideoUnavailable:
             return 0
-
+    #
     def download_thumbnail(self):
         with open("thumbnail\\{}.jpg".format(self.music_title), 'wb') as handle:
             response = requests.get(self.thumbnail_url, stream=True)
@@ -80,26 +84,30 @@ class Download():
                 if not block:
                     break
                 handle.write(block)
-
+    #
     def convert_video(self, location, should_delete):
         # Convert video to audio
-        #print("Converting audio....")
+        log.debug("Converting audio....")
         try:
+            self.window.update()
             video = VideoFileClip("{}.mp4".format(location))
+            self.window.update()
             video.audio.write_audiofile("{}/{}.mp3".format(self.download_location, self.music_title))
+            self.window.update()
             video.close()
+            self.window.update()
         except OSError:
             self.fail_count += 1
             self.failed_songs.append(self.music_title)
         finally:
             if should_delete: 
                 self.delete_video("{}.mp4".format(location))
-        #print("Conversion complete!") 
+        log.debug("Conversion complete!") 
 
-
+    #
     def delete_video(self, location):
         # Remove mp4 file after convert
-        #print("Removing mp4 file...")
+        log.debug("Removing mp4 file...")
         if os.path.exists(location):
             os.remove(location)
             return 1

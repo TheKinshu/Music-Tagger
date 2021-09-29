@@ -8,8 +8,11 @@ __pycache__/
 testing.py
 *.mp4
 *.rar
+*.zip
 *.mp3
 You-Down2.0/
 build/
 *.spec
 *.txt
+dist/
+*.log
