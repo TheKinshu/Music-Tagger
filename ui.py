@@ -15,6 +15,7 @@ class UI():
     def __init__(self) -> None:
         self.title = None
         self.results = None
+        self.lyrics = None
 
         self.window = Tk()
         self.window.title('Music Download/Tagger')
@@ -92,8 +93,12 @@ class UI():
 
         self.current_download_list = Listbox(height=18, width=45, exportselection=0)
         self.songs = [f for f in os.listdir("Downloads/") if f.endswith(".mp3")]
-        for song in self.songs:
-            self.current_download_list.insert(self.songs.index(song), song)
+        
+        if len(self.songs) > 0:
+            for song in self.songs:
+                self.current_download_list.insert(self.songs.index(song), song)
+        else:
+            self.current_download_list.insert(0, "No Information")
 
         self.current_download_list.bind("<<ListboxSelect>>", self.song_selection)
         self.canvas_download_list = self.canvas.create_window(20, 80, anchor="nw", window=self.current_download_list)
@@ -104,7 +109,7 @@ class UI():
         self.canvas_songs_list = self.canvas.create_window(580,80, anchor="ne", window=self.similar_song_list)
 
         self.lyric_box = Text(height=9, width=34)
-        self.lyric_box.config(state=DISABLED)
+        self.lyric_box.config(state=NORMAL)
         self.canvas_lyric = self.canvas.create_window(581, 223, anchor="ne", window=self.lyric_box)
 
         self.update_box = Text(height=3, width=70)
@@ -184,6 +189,7 @@ class UI():
 
         artist = self.tag_artist_entry.get()
         genre = self.tag_genre_entry.get()
+        lyric = self.lyric_box.get("1.0", END)
 
         if selected and not title == "":
             if self.similar_song_list.curselection():
@@ -202,9 +208,9 @@ class UI():
             self.updates("{}'s tags are updated!".format(new_info['Title']))
 
             if selected_info == new_info:
-                tg(self.title).tagInfo(selected_info)
+                tg(self.title).tagInfo(selected_info, lyric)
             else:
-                tg(self.title).tagInfo(new_info)
+                tg(self.title).tagInfo(new_info, lyric)
 
     def song_detail_selection(self, event):
         if not self.similar_song_list.get(self.similar_song_list.curselection()) == "No Information":
@@ -221,10 +227,9 @@ class UI():
         self.tag_album_entry.insert(0,details['Album'])
         self.tag_year_entry.insert(0,details['Year'])
         self.tag_genre_entry.insert(0,details['Genre'])
-        self.lyric_box.config(state=NORMAL)
+        self.lyrics = lyric
         self.lyric_box.delete('1.0', END)
         self.lyric_box.insert(END, "{}".format(lyric))
-        self.lyric_box.config(state=DISABLED)
     
     def delete_info(self):
         self.tag_title_entry.delete(0,END)
@@ -233,15 +238,16 @@ class UI():
         self.tag_album_entry.delete(0,END)
         self.tag_year_entry.delete(0,END)
         self.tag_genre_entry.delete(0,END)
-        self.lyric_box.delete(0,END)
+        self.lyric_box.delete("1.0",END)
 
     def song_selection(self, event):
-        self.similar_song_list.delete(0,END)
-        self.title = self.current_download_list.get(self.current_download_list.curselection())
-        tagger = tg(str(self.title).replace(".mp3",""))
-        self.results = tagger.search()
-        self.delete_info()
-        # update detail list
-        
-        for song in self.results:
-            self.similar_song_list.insert(self.results.index(song), "{} by {}".format(song["Title"], song["Artist"]))
+        if not self.current_download_list.get(self.current_download_list.curselection()) == "No Information":
+            self.similar_song_list.delete(0,END)
+            self.title = self.current_download_list.get(self.current_download_list.curselection())
+            tagger = tg(str(self.title).replace(".mp3",""))
+            self.results = tagger.search()
+            self.delete_info()
+            # update detail list
+            
+            for song in self.results:
+                self.similar_song_list.insert(self.results.index(song), "{} by {}".format(song["Title"], song["Artist"]))

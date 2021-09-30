@@ -11,9 +11,10 @@ class Lyric():
         response = requests.get(self.end_point)
 
         response.raise_for_status()
-
-        url = (response.json()["response"]["hits"][0]["result"]["url"])
-
+        try:
+            url = (response.json()["response"]["hits"][0]["result"]["url"])
+        except Exception:
+            return ""
         response = requests.get(url)
 
         response.raise_for_status()
@@ -37,8 +38,6 @@ class Lyric():
 
         song = os.linesep.join([s for s in song.splitlines() if s])
 
-        self.write_to_txt(song)
-        pprint(song)
         return song
 
     def write_to_txt(self, song):

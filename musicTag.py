@@ -1,5 +1,6 @@
-import requests, eyed3
-
+import requests
+from eyed3 import load
+from eyed3.id3 import Tag
 class MusicTag():
     #
     def __init__(self, title = None) -> None:
@@ -36,20 +37,23 @@ class MusicTag():
                 genre = dis_response.json()['results'][0]['genre'][0]
                 release_date = self.songs[i]['first-release-date']
                 release_year = str(self.songs[i]['first-release-date']).split("-")
+                album = self.songs[i]['primary-type']
             except IndexError:
                 genre = ""
                 release_date = ""
                 release_year = [[]]
+                album = ""
             except KeyError:
                 genre = ""
                 release_date = ""
                 release_year = [[]]
+                album = ""
 
             music_details = {
                 "Title": self.songs[i]['title'],
                 "Year": release_year[0],
                 "Release-Date": release_date,
-                "Album": self.songs[i]['primary-type'],
+                "Album": album,
                 "Contributing": artists[i],
                 "Artist": artists[i][0],
                 "Genre": genre
@@ -59,8 +63,12 @@ class MusicTag():
         return self.music
         
     #
-    def tagInfo(self, detail):
-        audiofile = eyed3.load("Downloads/{}".format(self.title))
+    def tagInfo(self, detail, lyric):
+        t = Tag()
+        t.lyrics.set(lyric)
+        t.save("Downloads/{}".format(self.title))
+        audiofile = load("Downloads/{}".format(self.title))
+        
         audiofile.tag.title = detail["Title"]
         audiofile.tag.album_artist = detail["Artist"]
         audiofile.tag.album = detail["Album"]
