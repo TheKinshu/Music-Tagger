@@ -165,7 +165,8 @@ class UI():
 
     def update_download(self):
         # Update downloaded list after downloading
-        new_list = [f for f in os.listdir("Downloads/") if f.endswith(".mp3")]
+
+        new_list = [f for f in os.listdir("Downloads/") if f.endswith(".mp3") or f.endswith(".mp4")]
         for song in new_list:
             if song not in self.songs:
                 self.current_download_list.insert(new_list.index(song), song)

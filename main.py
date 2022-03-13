@@ -1,3 +1,5 @@
 from ui import UI
 
-interface = UI()
+if __name__ == "__main__":
+    interface = UI()
+    
