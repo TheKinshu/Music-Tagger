@@ -1,8 +1,8 @@
 from pytube import YouTube, Playlist, cli
 from pytube.exceptions import VideoUnavailable
-from moviepy.video.io.VideoFileClip import VideoFileClip
 import requests, os, logging as log
-
+from moviepy.video.io.VideoFileClip import VideoFileClip
+import time
 class Download():
     # 
     def __init__(self, URL=None, playlist=None, window=None) -> None:
@@ -24,8 +24,20 @@ class Download():
         for video in self.yt_playlist.videos:
             try:
                 self.music_title = video.title
+            except VideoUnavailable:
+                self.fail_count += 1
+                self.failed_songs.append(self.music_title)
+                continue
+            except Exception:
+                continue
+            finally:
+                
+                # Download Video
+                stream = video.streams.filter(file_extension='mp4', res=resolution).first()
+                stream.download(self.download_location)
+                
+                self.music_title = video.title
                 self.thumbnail_url = video.thumbnail_url
-
                 # Find all the character not allow for file naming
                 for i in self.regex:
                     if i in self.music_title:
@@ -34,18 +46,10 @@ class Download():
 
                 self.download_thumbnail()
 
-                stream = video.streams.filter(file_extension='mp4', res=resolution).first()
-                stream.download(self.download_location)
-
                 # Location of mp4 
                 location = "{}{}".format(self.download_location, self.music_title)
                     
-                self.convert_video(location, should_delete)
-                    
-            except VideoUnavailable:
-                self.fail_count += 1
-                self.failed_songs.append(self.music_title)
-                continue
+                self.convert_video(location, should_delete)   
     #
     def download_link(self, should_delete, resolution="360p"):
         try:
