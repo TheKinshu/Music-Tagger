@@ -1,6 +1,7 @@
 from UI import UI
 import logging
 import os
+import threading
 
 
 def check_for_folders(logger):
@@ -15,6 +16,7 @@ def check_for_folders(logger):
 
 
 def start(logger):
+
     UI(logger)
 
 
@@ -30,4 +32,9 @@ class Client:
 
 
 if __name__ == '__main__':
-    Client()
+    app = threading.Thread(target=Client)
+    app.start()
+    print("Client Started")
+    app.join()
+    print("Client Closed")
+

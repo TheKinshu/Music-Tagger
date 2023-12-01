@@ -2,6 +2,8 @@ import tkinter as tk
 import ttkbootstrap as ttk
 from tktooltip import ToolTip
 import os
+import downloader
+import threading
 
 
 def check_for_songs(logger):
@@ -18,6 +20,10 @@ def check_for_songs(logger):
 
 class UI:
     def __init__(self, logger) -> None:
+
+        self.test = None
+        self.musicDownloader = downloader
+
         self.window = ttk.Window(themename="darkly")
         self.SIZE = "600x620"
 
@@ -43,7 +49,6 @@ class UI:
         # Page 3
         self.logger.info("Creating Page 3")
         self.create_page3()
-
 
         self.notebook.pack(expand=True, fill='both')
         self.window.mainloop()
@@ -149,12 +154,12 @@ class UI:
         self.yearEntry.grid(row=1, column=1, sticky='we', padx=(2, 5))
 
         self.genreCB = ttk.Combobox(self.musicSettings,
-                                       values=self.all_genre(), foreground="grey", textvariable=self.genre)
+                                    values=self.all_genre(), foreground="grey", textvariable=self.genre)
         self.genrePlaceHolder = "Genre"
         self.genreCB.insert(0, self.genrePlaceHolder)
         self.genreCB.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.genreCB))
         self.genreCB.bind("<FocusOut>",
-                              lambda event: self.on_focus_out(event, self.genreCB, self.genrePlaceHolder))
+                          lambda event: self.on_focus_out(event, self.genreCB, self.genrePlaceHolder))
         self.genreCB.grid(row=1, column=2, sticky='we', padx=(2, 5))
 
         self.saveSettingsButton = ttk.Button(self.musicSettings, text="Save Settings", bootstyle="secondary")
@@ -177,13 +182,16 @@ class UI:
         self.downloadSettings.rowconfigure(1, weight=1)
         self.downloadSettings.rowconfigure(2, weight=1)
 
-        self.playlistRadio = ttk.Radiobutton(self.downloadSettings, text="Playlist", value=1)
-        ToolTip(self.playlistRadio, "Download a playlist")
-        self.playlistRadio.grid(row=0, column=0, sticky='e')
+        self.downloadState = tk.IntVar(None, 1)
 
-        self.songRadio = ttk.Radiobutton(self.downloadSettings, text="Song", value=2)
+        self.playlistRadio = ttk.Radiobutton(self.downloadSettings, text="Playlist", value=2,
+                                             variable=self.downloadState)
+        ToolTip(self.playlistRadio, "Download a playlist")
+        self.playlistRadio.grid(row=0, column=1, sticky='e')
+
+        self.songRadio = ttk.Radiobutton(self.downloadSettings, text="Song", value=1, variable=self.downloadState)
         ToolTip(self.songRadio, "Download a single song")
-        self.songRadio.grid(row=0, column=1, sticky='e')
+        self.songRadio.grid(row=0, column=0, sticky='e')
 
         self.urlLink = tk.StringVar()
         self.downloadEntry = ttk.Entry(self.downloadSettings, foreground="grey", textvariable=self.urlLink)
@@ -195,11 +203,11 @@ class UI:
         self.downloadEntry.grid(row=1, column=0, columnspan=3, sticky='we', padx=3)
 
         self.downloadButton = ttk.Button(self.downloadSettings, text="Download", bootstyle="secondary")
+        self.downloadButton.bind("<Button-1>", self.downloadMusic)
         self.downloadButton.grid(row=2, column=0, columnspan=3, sticky='nesw')
 
         self.downloadArea = ttk.Labelframe(self.page2, text="Download Area")
         self.downloadArea.place(relx=0.05, rely=0.4, relwidth=0.9, relheight=0.5)
-
 
     def create_page3(self):
         self.page3 = ttk.Frame(self.notebook)
@@ -222,13 +230,38 @@ class UI:
         self.deleteSongCB.grid(row=0, column=0, sticky='e')
 
         # Set to see if the user wants to download the song in the highest quality
-        self.highestQualityLabel = ttk.Label(self.downloadSettingsFrame, text="Highest Quality")
-        self.highestQualityLabel.grid(row=1, column=0, sticky='')
-        self.highestQuality = tk.StringVar()
-        self.highestQuality.set("360")
-        self.highestQualityCB = ttk.Combobox(self.downloadSettingsFrame, values=["360", '480'], state="readonly",
-                                             textvariable=self.highestQuality, bootstyle="light")
-        self.highestQualityCB.grid(row=1, column=1,)
+        self.qualityCheckLabel = ttk.Label(self.downloadSettingsFrame, text="Highest Quality")
+        self.qualityCheckLabel.grid(row=1, column=0, sticky='')
+        self.qualityCheck = tk.StringVar()
+        self.qualityCheck.set("360p")
+        self.qualityCheckCB = ttk.Combobox(self.downloadSettingsFrame, values=["360p", '480p'], state="readonly",
+                                           textvariable=self.qualityCheck, bootstyle="light")
+        self.qualityCheckCB.grid(row=1, column=1, )
+
+    def downloadMusic(self, event):
+        if self.downloadState.get() == 1:
+            self.logger.info("Downloading song")
+            self.logger.info(f"URL: {self.urlLink.get()}")
+            self.logger.info(f"Delete Song: {self.deleteSong.get()}")
+            self.logger.info(f"Quality: {self.qualityCheck.get()}")
+
+            testing = self.musicDownloader.downloader(str(self.urlLink.get()), "Downloads", self.qualityCheck.get(),
+                                            self.logger, self.test)
+
+            testing.single_download()
+            # Grab the test variable from the downloader class
+            self.test = testing.get_test()
+
+            print(self.test)
+
+
+
+        elif self.downloadState.get() == 2:
+            self.logger.info("Downloading playlist")
+            self.logger.info(f"URL: {self.urlLink.get()}")
+            self.logger.info(f"Delete Song: {self.deleteSong.get()}")
+            self.logger.info(f"Quality: {self.qualityCheck.get()}")
+
     def get_songs(self, event):
         for item in self.panel1.selection():
             item_text = self.panel1.item(item, "text")
