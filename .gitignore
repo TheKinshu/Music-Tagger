@@ -3,6 +3,6 @@ test*.py
 venv
 .mp3
 .mp4
-.idea
+.idea/
 __pycache__
 ```
