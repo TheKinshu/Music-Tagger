@@ -3,7 +3,7 @@ import logging
 import os
 import threading
 import json
-
+import glob
 
 def check_for_folders(logger):
     try:
@@ -34,7 +34,7 @@ def check_settings(logger):
 
 class Client:
     def __init__(self) -> None:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.INFO)
         self.protocol = ['closed', 'restart']
         self.logger = logging.getLogger(__name__)
         self.logger.info("Checking for folders")
@@ -52,7 +52,20 @@ class Client:
 
             if settings.currentDelete:
                 self.logger.info("Deleting mp4 file")
-                # TODO: Delete mp4 file
+                folder_path = './Video'
+
+                # Use glob to get a list of all MP4 files in the folder
+                mp4_files = glob.glob(os.path.join(folder_path, '*.mp4'))
+
+                # Delete each MP4 file
+                # for mp4_file in mp4_files:
+                #     try:
+                #         os.remove(mp4_file)
+                #         print(f"Deleted: {mp4_file}")
+                #     except OSError as e:
+                #         print(f"Error deleting {mp4_file}: {e}")
+                self.logger.info("Deleting mp4 file complete")
+
 
             return self.protocol[0]
         except Exception as e:

@@ -1,7 +1,8 @@
 import requests
 import logging
 from pprint import pprint
-
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
 
 # Using REST API to get data from the database
 class Database:
@@ -15,8 +16,9 @@ class Database:
         self.link = "http://ws.audioscrobbler.com"
         self.artist = artist
         self.lastFmAPIUrl = f"{self.link}/2.0/?method={self.method}&format=json&api_key={self.lastFmAPIKey}"
-        self.discogsAPUrl = "https://api.discogs.com/database/search?q="
-
+        client_id = "2ecabf8ed1a1487584ef7fd9f78b5bc1"
+        client_secret = "ff8156c2d45245688ccf2d25c7c9be97"
+        self.spotify = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client_id, client_secret=client_secret))
 
     def get_artist_with_song_name(self):
         try:
@@ -59,41 +61,26 @@ class Database:
             # Get list of data
             results = r.json()
 
-            tags = []
-
-            for tag in results["toptags"]["tag"]:
-                tags.append(tag["name"])
-
-            return tags
+            return results['track']['name'], results['track']['artist']['name']
 
         except Exception as e:
             self.logger.error("Error getting data from database")
             self.logger.error(e)
             return None
 
-    def find_album(self):
+    def find_album(self, songName, artistName):
         try:
-            url = self.discogsAPUrl + f"{self.artist}+{self.trackTitle}&type=release&key={self.dicogsKey}&secret={self.discogsSecret}"
-            r = requests.get(url)
+            results = self.spotify.search(q='tack:' + f"{songName} + {artistName}", type='track')
 
-            # check status
-            if r.status_code != 200:
-                self.logger.error("Error getting data from database")
-                return None
+            tracks = results['tracks']['items'][0]
+            artists = [name['name'] for name in tracks['artists']]
+            year = tracks['album']['release_date'].split("-")[0]
+            if tracks['album']['album_type'] == "single":
+                albumName = "single"
+            else:
+                albumName = tracks['album']['name']
 
-            # Get list of data
-            results = r.json()
-
-            albums = []
-
-            for album in results["results"]:
-                albums.append({
-                    "title": album["title"],
-                    "year": album["year"],
-                    "id": album["id"]
-                })
-
-            return albums
+            return albumName, artists, year
 
         except Exception as e:
             self.logger.error("Error getting data from database")

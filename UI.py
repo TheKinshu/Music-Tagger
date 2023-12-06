@@ -3,9 +3,11 @@ import ttkbootstrap as ttk
 from tktooltip import ToolTip
 import os
 import downloader
-import threading
 import json
 from databases import Database as databases
+from eyed3 import load
+from eyed3.id3 import Tag
+
 
 def check_for_songs(logger):
     try:
@@ -70,7 +72,6 @@ class UI:
         # Page 2
         self.logger.info("Creating Page 1")
         self.create_page1()
-
 
         # Page 3
         self.logger.info("Creating Page 3")
@@ -188,7 +189,6 @@ class UI:
             # Add Online Database and lyrics
             self.infoFrame = ttk.Frame(self.popup)
 
-
             self.databasePanel = ttk.Treeview(self.infoFrame)
             self.databasePanel.heading("#0", text="Online Database")
             self.find_song()
@@ -222,13 +222,14 @@ class UI:
             self.songDetailNameEntry.insert(0, self.songPlaceHolder)
             self.songDetailNameEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.songDetailNameEntry))
             self.songDetailNameEntry.bind("<FocusOut>",
-                                            lambda event: self.on_focus_out(event, self.songDetailNameEntry,
-                                                                            self.songPlaceHolder))
+                                          lambda event: self.on_focus_out(event, self.songDetailNameEntry,
+                                                                          self.songPlaceHolder))
             self.songDetailNameEntry.grid(row=0, column=0, sticky='we', padx=(2, 5))
 
             self.artistDetailNameEntry = ttk.Entry(self.editorLF, foreground="grey", textvariable=self.artistDetailName)
             self.artistDetailNameEntry.insert(0, self.artistPlaceHolder)
-            self.artistDetailNameEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.artistDetailNameEntry))
+            self.artistDetailNameEntry.bind("<FocusIn>",
+                                            lambda event: self.on_focus_in(event, self.artistDetailNameEntry))
             self.artistDetailNameEntry.bind("<FocusOut>",
                                             lambda event: self.on_focus_out(event, self.artistDetailNameEntry,
                                                                             self.artistPlaceHolder))
@@ -236,30 +237,32 @@ class UI:
 
             self.conDetailArtistEntry = ttk.Entry(self.editorLF, foreground="grey", textvariable=self.conDetailArtist)
             self.conDetailArtistEntry.insert(0, self.conArtistPlaceHolder)
-            self.conDetailArtistEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.conDetailArtistEntry))
+            self.conDetailArtistEntry.bind("<FocusIn>",
+                                           lambda event: self.on_focus_in(event, self.conDetailArtistEntry))
             self.conDetailArtistEntry.bind("<FocusOut>",
-                                            lambda event: self.on_focus_out(event, self.conDetailArtistEntry,
-                                                                            self.conArtistPlaceHolder))
+                                           lambda event: self.on_focus_out(event, self.conDetailArtistEntry,
+                                                                           self.conArtistPlaceHolder))
             self.conDetailArtistEntry.grid(row=0, column=2, sticky='we', padx=(2, 5))
 
             self.albumDetailNameEntry = ttk.Entry(self.editorLF, foreground="grey", textvariable=self.albumDetailName)
             self.albumDetailNameEntry.insert(0, self.albumPlaceHolder)
-            self.albumDetailNameEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.albumDetailNameEntry))
+            self.albumDetailNameEntry.bind("<FocusIn>",
+                                           lambda event: self.on_focus_in(event, self.albumDetailNameEntry))
             self.albumDetailNameEntry.bind("<FocusOut>",
-                                            lambda event: self.on_focus_out(event, self.albumDetailNameEntry,
-                                                                            self.albumPlaceHolder))
+                                           lambda event: self.on_focus_out(event, self.albumDetailNameEntry,
+                                                                           self.albumPlaceHolder))
             self.albumDetailNameEntry.grid(row=1, column=0, sticky='we', padx=(2, 5))
 
             self.yearDetailEntry = ttk.Entry(self.editorLF, foreground="grey", textvariable=self.yearDetail)
             self.yearDetailEntry.insert(0, self.yearPlaceHolder)
             self.yearDetailEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.yearDetailEntry))
             self.yearDetailEntry.bind("<FocusOut>",
-                                            lambda event: self.on_focus_out(event, self.yearDetailEntry,
-                                                                            self.yearPlaceHolder))
+                                      lambda event: self.on_focus_out(event, self.yearDetailEntry,
+                                                                      self.yearPlaceHolder))
             self.yearDetailEntry.grid(row=1, column=1, sticky='we', padx=(2, 5))
 
             self.genreDetailCB = ttk.Combobox(self.editorLF,
-                                            values=self.all_genre(), foreground="grey", textvariable=self.genreDetail)
+                                              values=self.all_genre(), foreground="grey", textvariable=self.genreDetail)
             self.genreDetailCB.insert(0, self.genrePlaceHolder)
             self.genreDetailCB.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.genreDetailCB))
             self.genreDetailCB.bind("<FocusOut>",
@@ -278,12 +281,23 @@ class UI:
                 self.databasePanel.insert("", "end", text=f"{result['name']} - {result['artist']}")
         print(results)
 
-
     def detailEditingSaving(self, event):
         # TODO: Save the details
-        # Close the popup
-        self.popup.destroy()
-        pass
+
+        try:
+            audioFile = load(f"Downloads/{self.currentSelectedSong}.mp3")
+            audioFile.tag.album_artist = self.artistDetailName.get()
+            audioFile.tag.album = self.albumDetailName.get()
+            audioFile.tag.title = self.songDetailName.get()
+            audioFile.tag.artist = self.conDetailArtist.get()
+            audioFile.tag.recording_date = self.yearDetail.get()
+            audioFile.tag.genre = self.genreDetail.get()
+            audioFile.tag.save()
+        except Exception as e:
+            self.logger.error("Error saving details")
+        finally:
+            # Close the popup
+            self.popup.destroy()
 
     def create_page2(self):
         # Page 2
@@ -417,6 +431,16 @@ class UI:
             self.logger.info("Current selected song: " + item_text)
             self.currentSelectedSong = item_text
 
+            # Load the song details
+            audioFile = load(f"Downloads/{self.currentSelectedSong}.mp3")
+
+            self.songName.set(audioFile.tag.title)
+            self.artistName.set(audioFile.tag.artist)
+            self.conArtist.set(audioFile.tag.album_artist)
+            self.albumName.set(audioFile.tag.album)
+            self.year.set(audioFile.tag.recording_date)
+            self.genre.set(audioFile.tag.genre)
+
     def get_song_tags(self, event):
         selectionText = None
         for selection in self.databasePanel.selection():
@@ -424,9 +448,13 @@ class UI:
             self.logger.info("Current selected option " + selectionText)
         song, artist = selectionText.split(" - ")
         picks = databases(self.logger, song, artist, "getinfo")
-        picks.get_music_tag()
-        picks.find_album()
-
+        trackName, artistName = picks.get_music_tag()
+        album, artists, year = picks.find_album(trackName, artistName)
+        self.songDetailName.set(trackName)
+        self.artistDetailName.set(artistName)
+        self.conDetailArtist.set(", ".join(artists))
+        self.albumDetailName.set(album)
+        self.yearDetail.set(year)
 
     def on_focus_in(self, event, entry):
         placeholders = [self.songPlaceHolder, self.artistPlaceHolder, self.conArtistPlaceHolder, self.albumPlaceHolder,
@@ -462,6 +490,17 @@ class UI:
             # rename the file to song name with artist name
             os.rename(f"{self.downloadFolder}/{self.currentSelectedSong}.mp3",
                       f"{self.downloadFolder}/{self.songName.get()} - {self.artistName.get()}.mp3")
+
+            # Load the song details
+            audioFile = load(f"Downloads/{self.songName.get()} - {self.artistName.get()}.mp3")
+            audioFile.tag.album_artist = self.artistName.get()
+            audioFile.tag.album = self.albumName.get()
+            audioFile.tag.title = self.songName.get()
+            audioFile.tag.artist = self.conArtist.get()
+            audioFile.tag.recording_date = self.year.get()
+            audioFile.tag.genre = self.genre.get()
+            audioFile.tag.save()
+
 
             # reset panel and get new songs
             self.panel1.delete(*self.panel1.get_children())

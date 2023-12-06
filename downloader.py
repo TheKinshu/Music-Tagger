@@ -27,7 +27,7 @@ class downloader:
                 time.sleep(2)
                 self.logger.info("Download Complete")
                 self.logger.info("Converting to mp3")
-                Converter(f"{self.path}/{self.title}.mp4").convert()
+                Converter(self.title).convert()
                 self.logger.info("Conversion Complete")
 
         except Exception as e:
