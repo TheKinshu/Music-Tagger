@@ -175,7 +175,7 @@ class UI:
         self.genreCB.grid(row=1, column=2, sticky='we', padx=(2, 5))
 
         self.saveSettingsButton = ttk.Button(self.musicSettings, text="Save Settings", bootstyle="secondary")
-        self.saveSettingsButton.bind("<Button-1>", self.save_settings)
+        self.saveSettingsButton.bind("<Button-1>", self.quick_edit_saves)
         self.saveSettingsButton.grid(row=2, column=0, columnspan=3, sticky='nesw')
 
     def detail_edit(self, event):
@@ -282,7 +282,6 @@ class UI:
         print(results)
 
     def detailEditingSaving(self, event):
-        # TODO: Save the details
 
         try:
             audioFile = load(f"Downloads/{self.currentSelectedSong}.mp3")
@@ -406,9 +405,6 @@ class UI:
     def downloadMusic(self, event):
         if self.downloadState.get() == 1:
             self.logger.info("Downloading song")
-            self.logger.info(f"URL: {self.urlLink.get()}")
-            self.logger.info(f"Delete Song: {self.deleteSong.get()}")
-            self.logger.info(f"Quality: {self.qualityCheck.get()}")
 
             testing = self.musicDownloader.downloader(str(self.urlLink.get()), "Video", self.qualityCheck.get(),
                                                       self.logger, self.test)
@@ -421,11 +417,18 @@ class UI:
 
         elif self.downloadState.get() == 2:
             self.logger.info("Downloading playlist")
-            self.logger.info(f"URL: {self.urlLink.get()}")
-            self.logger.info(f"Delete Song: {self.deleteSong.get()}")
-            self.logger.info(f"Quality: {self.qualityCheck.get()}")
+            self.musicDownloader.downloader(str(self.urlLink.get()), "Video", self.qualityCheck.get(), self.logger,
+                                            self.test, self.window).playlist_download()
 
     def get_songs(self, event):
+        # reset the entry boxes with placeholders
+        self.songName.set(self.songPlaceHolder)
+        self.artistName.set(self.artistPlaceHolder)
+        self.conArtist.set(self.conArtistPlaceHolder)
+        self.albumName.set(self.albumPlaceHolder)
+        self.year.set(self.yearPlaceHolder)
+        self.genre.set(self.genrePlaceHolder)
+
         for item in self.panel1.selection():
             item_text = self.panel1.item(item, "text")
             self.logger.info("Current selected song: " + item_text)
@@ -434,27 +437,35 @@ class UI:
             # Load the song details
             audioFile = load(f"Downloads/{self.currentSelectedSong}.mp3")
 
-            self.songName.set(audioFile.tag.title)
-            self.artistName.set(audioFile.tag.artist)
-            self.conArtist.set(audioFile.tag.album_artist)
-            self.albumName.set(audioFile.tag.album)
-            self.year.set(audioFile.tag.recording_date)
-            self.genre.set(audioFile.tag.genre)
+            # Set tags if they exist
+            set_if_not_none = lambda attr, var: var.set(getattr(audioFile.tag, attr)) if getattr(audioFile.tag,
+                                                                                                 attr) is not None else None
+
+            set_if_not_none('title', self.songName)
+            set_if_not_none('artist', self.artistName)
+            set_if_not_none('album_artist', self.conArtist)
+            set_if_not_none('album', self.albumName)
+            set_if_not_none('recording_date', self.year)
+            set_if_not_none('genre', self.genre)
 
     def get_song_tags(self, event):
-        selectionText = None
-        for selection in self.databasePanel.selection():
-            selectionText = self.databasePanel.item(selection, "text")
-            self.logger.info("Current selected option " + selectionText)
-        song, artist = selectionText.split(" - ")
-        picks = databases(self.logger, song, artist, "getinfo")
-        trackName, artistName = picks.get_music_tag()
-        album, artists, year = picks.find_album(trackName, artistName)
-        self.songDetailName.set(trackName)
-        self.artistDetailName.set(artistName)
-        self.conDetailArtist.set(", ".join(artists))
-        self.albumDetailName.set(album)
-        self.yearDetail.set(year)
+        try:
+            selectionText = None
+            for selection in self.databasePanel.selection():
+                selectionText = self.databasePanel.item(selection, "text")
+                self.logger.info("Current selected option " + selectionText)
+            song, artist = selectionText.split(" - ")
+            picks = databases(self.logger, song, artist, "getinfo")
+            trackName, artistName = picks.get_music_tag()
+            album, artists, year = picks.find_album(trackName, artistName)
+            self.songDetailName.set(trackName)
+            self.artistDetailName.set(artistName)
+            self.conDetailArtist.set(", ".join(artists))
+            self.albumDetailName.set(album)
+            self.yearDetail.set(year)
+        except Exception as e:
+            self.logger.error("Error getting song tags")
+            self.logger.error(e)
 
     def on_focus_in(self, event, entry):
         placeholders = [self.songPlaceHolder, self.artistPlaceHolder, self.conArtistPlaceHolder, self.albumPlaceHolder,
@@ -477,7 +488,7 @@ class UI:
                 "Electronic", "Dance", "Classical", "Latin", "Metal", "Alternative", "Indie", "Punk", "Gospel",
                 "Christian", "Instrumental", "New Age", "Folk", "World", "Other"]
 
-    def save_settings(self, event):
+    def quick_edit_saves(self, event):
         self.logger.info("Saving settings")
         if len(self.songName.get()) > 0 and self.songName.get() != self.songPlaceHolder:
             self.logger.info(f"Song Name: {self.songName.get()}")
@@ -492,15 +503,33 @@ class UI:
                       f"{self.downloadFolder}/{self.songName.get()} - {self.artistName.get()}.mp3")
 
             # Load the song details
-            audioFile = load(f"Downloads/{self.songName.get()} - {self.artistName.get()}.mp3")
-            audioFile.tag.album_artist = self.artistName.get()
-            audioFile.tag.album = self.albumName.get()
-            audioFile.tag.title = self.songName.get()
-            audioFile.tag.artist = self.conArtist.get()
-            audioFile.tag.recording_date = self.year.get()
-            audioFile.tag.genre = self.genre.get()
-            audioFile.tag.save()
+            audioFile = load(f"./Downloads/{self.songName.get()} - {self.artistName.get()}.mp3")
 
+            # Set tags if the entry is not empty
+            set_tag_if_not_empty = lambda tag, value, placeholder: setattr(audioFile.tag, tag,
+                                                                           value) if value != placeholder else None
+
+            set_tag_if_not_empty('title', self.songName.get(), self.songPlaceHolder)
+            set_tag_if_not_empty('artist', self.artistName.get(), self.artistPlaceHolder)
+            set_tag_if_not_empty('album_artist', self.conArtist.get(), self.conArtistPlaceHolder)
+            set_tag_if_not_empty('album', self.albumName.get(), self.albumPlaceHolder)
+            set_tag_if_not_empty('recording_date', self.year.get(), self.yearPlaceHolder)
+            set_tag_if_not_empty('genre', self.genre.get(), self.genrePlaceHolder)
+
+            # Only add the specific tags if the entry is not empty
+            # if self.songName.get() != self.songPlaceHolder:
+            #     audioFile.tag.title = self.songName.get()
+            # if self.artistName.get() != self.artistPlaceHolder:
+            #     audioFile.tag.artist = self.artistName.get()
+            # if self.conArtist.get() != self.conArtistPlaceHolder:
+            #     audioFile.tag.album_artist = self.conArtist.get()
+            # if self.albumName.get() != self.albumPlaceHolder:
+            #     audioFile.tag.album = self.albumName.get()
+            # if self.year.get() != self.yearPlaceHolder:
+            #     audioFile.tag.recording_date = self.year.get()
+            # if self.genre.get() != self.genrePlaceHolder:
+            #     audioFile.tag.genre = self.genre.get()
+            audioFile.tag.save()
 
             # reset panel and get new songs
             self.panel1.delete(*self.panel1.get_children())

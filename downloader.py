@@ -1,19 +1,23 @@
 import time
 import os
-from pytube import YouTube
-import threading
+from pytube import YouTube, Playlist
+from threading import Thread
 from converter import Converter
 import logging
 
 
 # Download youtube video
 class downloader:
-    def __init__(self, url, path, resolution, logger=None, test=None):
+    def __init__(self, url, path, resolution, logger=None, test=None, window=None):
+        self.window = window
         self.url = url
         self.path = path
         self.resolution = resolution
         self.logger = logger
         self.test = test
+        self.title = None
+        self.playlist = None
+        self.regex = ['/', '\\', '?', '<', '>', '?', '*', '"', '|', ':', '.', ',', "'", '#', '$', ';']
 
     def on_progress(self, stream, chunk, bytes_remaining):
         try:
@@ -27,7 +31,15 @@ class downloader:
                 time.sleep(2)
                 self.logger.info("Download Complete")
                 self.logger.info("Converting to mp3")
-                Converter(self.title).convert()
+                try:
+                    for i in self.regex:
+                        if i in self.title:
+                            self.title = self.title.replace(i, "")
+                    self.logger.info("Converting file: " + self.title)
+                except Exception as e:
+                    self.logger.error("Error converting file: " + str(e))
+
+                Converter("./Video", self.title).convert()
                 self.logger.info("Conversion Complete")
 
         except Exception as e:
@@ -46,14 +58,60 @@ class downloader:
             self.logger.info("Downloading Video")
             self.found = (self.video.streams.filter(progressive=True, file_extension='mp4', resolution=self.resolution)
                           .order_by('resolution').desc().first())
-            threading.Thread(target=self.found.download, kwargs={"output_path": self.path}).start()
+            Thread(target=self.found.download, kwargs={"output_path": self.path}).start()
             self.logger.info("Download Complete")
 
             self.test = True
             return True
         except Exception as e:
-            self.logger.error("Error downloading video")
+            self.logger.error("Error downloading video:" + str(e))
             self.test = True
+            return False
+
+    def download_video(self, video_url, index, total_videos):
+        try:
+            self.video = YouTube(video_url)
+            self.title = self.video.title
+
+            self.window.update_idletasks()
+            self.video.streams.filter(progressive=True, file_extension='mp4', resolution=self.resolution).order_by(
+                'resolution').desc().first().download(output_path=self.path)
+
+            # convert to mp3
+            self.logger.info("Converting to mp3")
+
+            try:
+                for i in self.regex:
+                    if i in self.title:
+                        self.title = self.title.replace(i, "")
+                self.logger.info("Converting file: " + self.title)
+                Converter("./Video", self.title).convert()
+            except Exception as e:
+                self.logger.error("Error converting file: " + str(e))
+
+
+        except Exception as e:
+            self.logger.error("Error downloading video:" + str(e))
+            return False
+
+    def download_async(self, url):
+        try:
+            playlist = Playlist(url)
+            total_videos = len(playlist.video_urls)
+
+            for index, video_url in enumerate(playlist.video_urls, start=1):
+                self.download_video(video_url, index, total_videos)
+            pass
+        except Exception as e:
+            self.logger.error("Error downloading video:" + str(e))
+
+    def playlist_download(self):
+        try:
+            self.logger.info("Finding Videos")
+            download_thread = Thread(target=self.download_async, args=(self.url,))
+            download_thread.start()
+        except Exception as e:
+            self.logger.error("Error downloading video:" + str(e))
             return False
 
 

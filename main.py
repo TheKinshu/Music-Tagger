@@ -42,9 +42,9 @@ class Client:
         self.settings = check_settings(self.logger)
         self.logger.info("Starting client")
 
-        self.status = self.start()
 
         self.logger.info("Closing Client")
+        self.regex = ['/', '\\', '?', '<', '>', '?', '*', '"', '|', ':', '.', ',', "'", '#', '$', ';']
 
     def start(self):
         try:
@@ -58,12 +58,12 @@ class Client:
                 mp4_files = glob.glob(os.path.join(folder_path, '*.mp4'))
 
                 # Delete each MP4 file
-                # for mp4_file in mp4_files:
-                #     try:
-                #         os.remove(mp4_file)
-                #         print(f"Deleted: {mp4_file}")
-                #     except OSError as e:
-                #         print(f"Error deleting {mp4_file}: {e}")
+                for mp4_file in mp4_files:
+                    try:
+                        os.remove(mp4_file)
+                        print(f"Deleted: {mp4_file}")
+                    except OSError as e:
+                        print(f"Error deleting {mp4_file}: {e}")
                 self.logger.info("Deleting mp4 file complete")
 
 
@@ -76,8 +76,7 @@ class Client:
 
 if __name__ == '__main__':
     try:
-        app = threading.Thread(target=Client)
+        app = Client()
         app.start()
-        app.join()
     except Exception as e:
         logging.error({e})
