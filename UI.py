@@ -29,6 +29,7 @@ class UI:
         self.settings = settings
         self.currentSelectedSong = None
         self.downloadFolder = "Downloads"
+        self.currentDownload = "None"
 
         self.test = None
         self.musicDownloader = downloader
@@ -118,6 +119,7 @@ class UI:
         self.musicSettings.rowconfigure(0, weight=1)
         self.musicSettings.rowconfigure(1, weight=1)
         self.musicSettings.rowconfigure(2, weight=3)
+        self.musicSettings.rowconfigure(3, weight=3)
 
         self.songName = tk.StringVar()
         self.artistName = tk.StringVar()
@@ -177,6 +179,18 @@ class UI:
         self.saveSettingsButton = ttk.Button(self.musicSettings, text="Save Settings", bootstyle="secondary")
         self.saveSettingsButton.bind("<Button-1>", self.quick_edit_saves)
         self.saveSettingsButton.grid(row=2, column=0, columnspan=3, sticky='nesw')
+
+        # force update button
+        self.forceUpdateButton = ttk.Button(self.musicSettings, text="Force Update", bootstyle="success")
+        self.forceUpdateButton.bind("<Button-1>", self.force_update)
+        self.forceUpdateButton.grid(row=3, column=0, columnspan=3, sticky='nesw')
+
+    def force_update(self, event):
+        # refresh the music library
+        self.panel1.delete(*self.panel1.get_children())
+        self.songs = check_for_songs(self.logger)
+        for song in self.songs:
+            self.panel1.insert("", "end", text=song.replace(".mp3", ""))
 
     def detail_edit(self, event):
         if self.currentSelectedSong is not None:
@@ -341,6 +355,13 @@ class UI:
         self.downloadArea = ttk.Labelframe(self.page2, text="Download Area")
         self.downloadArea.place(relx=0.05, rely=0.4, relwidth=0.9, relheight=0.5)
 
+        self.processingLabel = ttk.Label(self.downloadArea, text="Currently Downloading:\t\t\tNone")
+        self.processingLabel.place(relx=0.05, rely=0.1)
+
+        self.progress = ttk.Meter(self.downloadArea, subtext="Download Progress", textright="%", stripethickness=10,)
+        self.progress.place(relx=0.32, rely=0.2)
+
+
     def create_page3(self):
         self.page3 = ttk.Frame(self.notebook)
         self.notebook.add(self.page3, text="Settings")
@@ -402,23 +423,23 @@ class UI:
         # change theme
         self.window.style.theme_use(self.themeSettings.get())
 
+    def setProgress(self, title, progress):
+        self.processingLabel.config(text=f"Currently Downloading:\t\t\t{title}")
+        self.progress["amountused"] = round(progress * 100, 2)
+
     def downloadMusic(self, event):
         if self.downloadState.get() == 1:
             self.logger.info("Downloading song")
 
-            testing = self.musicDownloader.downloader(str(self.urlLink.get()), "Video", self.qualityCheck.get(),
-                                                      self.logger, self.test)
+            downloader = self.musicDownloader.downloader(str(self.urlLink.get()), "Video", self.qualityCheck.get(),
+                                                      self.logger, self.setProgress, self.window)
 
-            testing.single_download()
-            # Grab the test variable from the downloader class
-            self.test = testing.get_test()
-
-            print(self.test)
+            downloader.single_download()
 
         elif self.downloadState.get() == 2:
             self.logger.info("Downloading playlist")
             self.musicDownloader.downloader(str(self.urlLink.get()), "Video", self.qualityCheck.get(), self.logger,
-                                            self.test, self.window).playlist_download()
+                                            self.setProgress, self.window).playlist_download()
 
     def get_songs(self, event):
         # reset the entry boxes with placeholders
