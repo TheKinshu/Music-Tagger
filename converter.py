@@ -2,6 +2,7 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 import re, os
 import difflib
 
+
 class Converter:
     def __init__(self, location, title):
         self.title = title

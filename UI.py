@@ -7,6 +7,7 @@ import json
 from databases import Database as databases
 from eyed3 import load
 from eyed3.id3 import Tag
+from azlyrics.azlyrics import lyrics
 
 
 def check_for_songs(logger):
@@ -19,6 +20,33 @@ def check_for_songs(logger):
         logger.error("Error checking for songs")
         songs = []
     return songs
+
+
+def check_for_lyrics(logger, song, artist):
+    logger.info("Checking for lyrics")
+    results = lyrics(artist, song)
+    logger.info(results)
+    if "Error" in results:
+        # remove non-english characters
+        song = song.encode("ascii", "ignore").decode()
+        logger.info(song)
+        # remove brackets in song title
+        song = song.replace("(", "").replace(")", "")
+        # remove whitespace with a dash
+        results = lyrics(artist, song)
+        if "Error" in results:
+            # remove whitespace with a dash
+            artist = artist.replace(" ", "-")
+            logger.info(artist)
+            results = lyrics(artist, song)
+
+    if "Error" not in results:
+        logger.info("Lyrics found")
+        # remove and newlines from the start of the lyrics
+    else:
+        logger.info("Lyrics not found")
+        results = [""]
+    return results[0]
 
 
 class UI:
@@ -53,6 +81,7 @@ class UI:
         self.currentDelete = self.settings["delete-afterward"]
 
         self.window = ttk.Window(themename=self.currentTheme)
+        self.window.iconbitmap("doro.ico")
         self.SIZE = "600x620"
 
         self.window.minsize(600, 620)
@@ -196,6 +225,7 @@ class UI:
         if self.currentSelectedSong is not None:
             # Create a popup window
             self.popup = tk.Toplevel()
+            self.popup.iconbitmap("doro.ico")
             self.popup.title("Edit Song Details")
             self.popup.geometry("600x620")
             self.popup.minsize(600, 620)
@@ -209,9 +239,17 @@ class UI:
             self.databasePanel.place(relx=0.01, rely=0.03, relwidth=0.47, relheight=0.59)
             self.databasePanel.bind("<<TreeviewSelect>>", self.get_song_tags)
 
-            self.lyricsPanel = ttk.Treeview(self.infoFrame)
-            self.lyricsPanel.heading("#0", text="Lyrics")
-            self.lyricsPanel.place(relx=0.53, rely=0.03, relwidth=0.47, relheight=0.59)
+            # Add lyrics panel with label frame saying its Lyrics and add a text box that fills the label frame with
+            # 1 x 1 grid
+            self.lyricsLabel = ttk.Labelframe(self.infoFrame, text="Lyrics")
+            self.lyricsLabel.columnconfigure(0, weight=1)
+            self.lyricsLabel.rowconfigure(0, weight=1)
+
+            # Add a text box that fills the label frame with 1 x 1 grid
+            self.lyricsText = tk.Text(self.lyricsLabel)
+            self.lyricsText.grid(row=0, column=0, sticky='nesw')
+            self.lyricsText.insert(tk.END, "Lyrics")
+            self.lyricsLabel.place(relx=0.53, rely=0.03, relwidth=0.47, relheight=0.59)
 
             self.infoFrame.pack(expand=True, fill='both', pady=(20, 0), padx=30)
 
@@ -305,6 +343,9 @@ class UI:
             audioFile.tag.artist = self.conDetailArtist.get()
             audioFile.tag.recording_date = self.yearDetail.get()
             audioFile.tag.genre = self.genreDetail.get()
+            # save lyrics
+            audioFile.tag.lyrics.set(self.lyricsText.get(1.0, tk.END))
+            # save the changes
             audioFile.tag.save()
         except Exception as e:
             self.logger.error("Error saving details")
@@ -358,9 +399,8 @@ class UI:
         self.processingLabel = ttk.Label(self.downloadArea, text="Currently Downloading:\t\t\tNone")
         self.processingLabel.place(relx=0.05, rely=0.1)
 
-        self.progress = ttk.Meter(self.downloadArea, subtext="Download Progress", textright="%", stripethickness=10,)
+        self.progress = ttk.Meter(self.downloadArea, subtext="Download Progress", textright="%", stripethickness=10, )
         self.progress.place(relx=0.32, rely=0.2)
-
 
     def create_page3(self):
         self.page3 = ttk.Frame(self.notebook)
@@ -432,7 +472,7 @@ class UI:
             self.logger.info("Downloading song")
 
             downloader = self.musicDownloader.downloader(str(self.urlLink.get()), "Video", self.qualityCheck.get(),
-                                                      self.logger, self.setProgress, self.window)
+                                                         self.logger, self.setProgress, self.window)
 
             downloader.single_download()
 
@@ -469,6 +509,7 @@ class UI:
             set_if_not_none('recording_date', self.year)
             set_if_not_none('genre', self.genre)
 
+
     def get_song_tags(self, event):
         try:
             selectionText = None
@@ -476,6 +517,9 @@ class UI:
                 selectionText = self.databasePanel.item(selection, "text")
                 self.logger.info("Current selected option " + selectionText)
             song, artist = selectionText.split(" - ")
+            lyrics = check_for_lyrics(self.logger, song, artist)
+            self.lyricsText.delete(1.0, tk.END)
+            self.lyricsText.insert(tk.END, lyrics)
             picks = databases(self.logger, song, artist, "getinfo")
             trackName, artistName = picks.get_music_tag()
             album, artists, year = picks.find_album(trackName, artistName)
