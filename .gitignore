@@ -5,4 +5,8 @@ venv
 .mp4
 .idea/
 __pycache__
-```
+*.ico
+*.exe
+dist/
+build/
+*.spec
