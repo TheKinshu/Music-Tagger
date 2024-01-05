@@ -2,3 +2,6 @@ pytube==15.0.0
 tkinter-tooltip
 ttkbootstrap
 moviepy
+spotipy
+eyed3
+azlyrics

@@ -1,3 +1,8 @@
+import threading
+
+from PIL import Image
+
+Image.CUBIC = Image.BICUBIC
 import tkinter as tk
 import ttkbootstrap as ttk
 from tktooltip import ToolTip
@@ -51,7 +56,6 @@ def check_for_lyrics(logger, song, artist):
 
 class UI:
     def __init__(self, logger, settings=None) -> None:
-
         self.themeSettings = None
         self.logger = logger
         self.settings = settings
@@ -89,6 +93,13 @@ class UI:
         self.window.title("Welcome to Music Download/Tagger 2.0")
         self.window.geometry(self.SIZE)
 
+
+        self.menu_option = ttk.Menu(self.window)
+        # Copying Link
+        self.menu_option.add_command(label="Copy", command=lambda: self.downloadEntry.event_generate("<<Copy>>"))
+        # Pasting Link
+        self.menu_option.add_command(label="Paste", command=lambda: self.downloadEntry.event_generate("<<Paste>>"))
+
         self.logger = logger
         self.logger.info("Creating UI")
 
@@ -109,6 +120,9 @@ class UI:
 
         self.notebook.pack(expand=True, fill='both')
         self.window.mainloop()
+
+    def pop_menu(self, e):
+        self.menu_option.tk_popup(e.x_root, e.y_root)
 
     def create_page1(self):
         self.page1 = ttk.Frame(self.notebook)
@@ -216,10 +230,7 @@ class UI:
 
     def force_update(self, event):
         # refresh the music library
-        self.panel1.delete(*self.panel1.get_children())
-        self.songs = check_for_songs(self.logger)
-        for song in self.songs:
-            self.panel1.insert("", "end", text=song.replace(".mp3", ""))
+        self.setLibrary()
 
     def detail_edit(self, event):
         if self.currentSelectedSong is not None:
@@ -387,6 +398,7 @@ class UI:
         self.downloadEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.downloadEntry))
         self.downloadEntry.bind("<FocusOut>",
                                 lambda event: self.on_focus_out(event, self.downloadEntry, "Enter URL"))
+        self.downloadEntry.bind("<Button-3>", self.pop_menu)
         self.downloadEntry.grid(row=1, column=0, columnspan=3, sticky='we', padx=3)
 
         self.downloadButton = ttk.Button(self.downloadSettings, text="Download", bootstyle="secondary")
@@ -396,7 +408,7 @@ class UI:
         self.downloadArea = ttk.Labelframe(self.page2, text="Download Area")
         self.downloadArea.place(relx=0.05, rely=0.4, relwidth=0.9, relheight=0.5)
 
-        self.processingLabel = ttk.Label(self.downloadArea, text="Currently Downloading:\t\t\tNone")
+        self.processingLabel = ttk.Label(self.downloadArea, text="Currently Downloading:\tNone")
         self.processingLabel.place(relx=0.05, rely=0.1)
 
         self.progress = ttk.Meter(self.downloadArea, subtext="Download Progress", textright="%", stripethickness=10, )
@@ -420,7 +432,7 @@ class UI:
         # Set to see if the user wants to delete the song after downloading
         self.deleteSong = tk.BooleanVar()
         self.deleteSong.set(self.currentDelete)
-        self.deleteSongCB = ttk.Checkbutton(self.downloadSettingsFrame, text="Delete Song After Download",
+        self.deleteSongCB = ttk.Checkbutton(self.downloadSettingsFrame, text="Delete Video After Download is completed",
                                             variable=self.deleteSong)
         self.deleteSongCB.grid(row=0, column=0, sticky='e')
 
@@ -429,7 +441,7 @@ class UI:
         self.qualityCheckLabel.grid(row=1, column=0, sticky='')
         self.qualityCheck = tk.StringVar()
         self.qualityCheck.set(self.currentQuality)
-        self.qualityCheckCB = ttk.Combobox(self.downloadSettingsFrame, values=["360p", '480p'], state="readonly",
+        self.qualityCheckCB = ttk.Combobox(self.downloadSettingsFrame, values=["360p", "480p"], state="readonly",
                                            textvariable=self.qualityCheck, bootstyle="light")
         self.qualityCheckCB.grid(row=1, column=1, )
 
@@ -463,9 +475,18 @@ class UI:
         # change theme
         self.window.style.theme_use(self.themeSettings.get())
 
-    def setProgress(self, title, progress):
-        self.processingLabel.config(text=f"Currently Downloading:\t\t\t{title}")
+    def setProgress(self, title, progress, complete):
+        self.processingLabel.config(text=f"Currently Downloading:\t{title}")
         self.progress["amountused"] = round(progress * 100, 2)
+
+        if complete:
+            self.setLibrary()
+
+    def setLibrary(self):
+        self.songs = check_for_songs(self.logger)
+        self.panel1.delete(*self.panel1.get_children())
+        for song in self.songs:
+            self.panel1.insert("", "end", text=song.replace(".mp3", ""))
 
     def downloadMusic(self, event):
         if self.downloadState.get() == 1:
@@ -476,10 +497,17 @@ class UI:
 
             downloader.single_download()
 
+            # Use threading to wait for completion
+
+            self.urlLink.set("")
+
+
         elif self.downloadState.get() == 2:
             self.logger.info("Downloading playlist")
             self.musicDownloader.downloader(str(self.urlLink.get()), "Video", self.qualityCheck.get(), self.logger,
                                             self.setProgress, self.window).playlist_download()
+            # Delete URL
+            self.urlLink.set("")
 
     def get_songs(self, event):
         # reset the entry boxes with placeholders
@@ -508,7 +536,6 @@ class UI:
             set_if_not_none('album', self.albumName)
             set_if_not_none('recording_date', self.year)
             set_if_not_none('genre', self.genre)
-
 
     def get_song_tags(self, event):
         try:
@@ -581,26 +608,10 @@ class UI:
             set_tag_if_not_empty('recording_date', self.year.get(), self.yearPlaceHolder)
             set_tag_if_not_empty('genre', self.genre.get(), self.genrePlaceHolder)
 
-            # Only add the specific tags if the entry is not empty
-            # if self.songName.get() != self.songPlaceHolder:
-            #     audioFile.tag.title = self.songName.get()
-            # if self.artistName.get() != self.artistPlaceHolder:
-            #     audioFile.tag.artist = self.artistName.get()
-            # if self.conArtist.get() != self.conArtistPlaceHolder:
-            #     audioFile.tag.album_artist = self.conArtist.get()
-            # if self.albumName.get() != self.albumPlaceHolder:
-            #     audioFile.tag.album = self.albumName.get()
-            # if self.year.get() != self.yearPlaceHolder:
-            #     audioFile.tag.recording_date = self.year.get()
-            # if self.genre.get() != self.genrePlaceHolder:
-            #     audioFile.tag.genre = self.genre.get()
             audioFile.tag.save()
 
             # reset panel and get new songs
-            self.panel1.delete(*self.panel1.get_children())
-            self.songs = check_for_songs(self.logger)
-            for song in self.songs:
-                self.panel1.insert("", "end", text=song.replace(".mp3", ""))
+            self.setLibrary()
 
             self.currentSelectedSong = None
 
