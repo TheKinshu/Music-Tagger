@@ -93,12 +93,11 @@ class UI:
         self.window.title("Welcome to Music Download/Tagger 2.0")
         self.window.geometry(self.SIZE)
 
-
         self.menu_option = ttk.Menu(self.window)
-        # Copying Link
-        self.menu_option.add_command(label="Copy", command=lambda: self.downloadEntry.event_generate("<<Copy>>"))
+        # Copying copy hovered entry
+        self.menu_option.add_command(label="Copy")
         # Pasting Link
-        self.menu_option.add_command(label="Paste", command=lambda: self.downloadEntry.event_generate("<<Paste>>"))
+        self.menu_option.add_command(label="Paste")
 
         self.logger = logger
         self.logger.info("Creating UI")
@@ -121,8 +120,21 @@ class UI:
         self.notebook.pack(expand=True, fill='both')
         self.window.mainloop()
 
-    def pop_menu(self, e):
-        self.menu_option.tk_popup(e.x_root, e.y_root)
+    def copy_text(self, entry):
+        entry.clipboard_clear()
+        entry.clipboard_append(entry.get())
+
+    def paste_text(self,  entry):
+        content = entry.clipboard_get()
+        if content:
+            entry.delete(0, tk.END)
+            entry.insert(0, entry.clipboard_get())
+
+
+    def pop_menu(self, event, entry):
+        self.menu_option.tk_popup(event.x_root, event.y_root)
+        self.menu_option.entryconfigure("Copy", command=lambda: self.copy_text(entry))
+        self.menu_option.entryconfigure("Paste", command=lambda: self.paste_text(entry))
 
     def create_page1(self):
         self.page1 = ttk.Frame(self.notebook)
@@ -174,6 +186,7 @@ class UI:
         self.songNameEntry = ttk.Entry(self.musicSettings, foreground="grey", textvariable=self.songName)
         self.songPlaceHolder = "Song Name"
         self.songNameEntry.insert(0, self.songPlaceHolder)
+        self.songNameEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.songNameEntry))
         self.songNameEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.songNameEntry))
         self.songNameEntry.bind("<FocusOut>",
                                 lambda event: self.on_focus_out(event, self.songNameEntry, self.songPlaceHolder))
@@ -185,6 +198,7 @@ class UI:
         self.artistNameEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.artistNameEntry))
         self.artistNameEntry.bind("<FocusOut>",
                                   lambda event: self.on_focus_out(event, self.artistNameEntry, self.artistPlaceHolder))
+        self.artistNameEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.artistNameEntry))
         self.artistNameEntry.grid(row=0, column=1, sticky='we', padx=(2, 5))
 
         self.conArtistEntry = ttk.Entry(self.musicSettings, foreground="grey", textvariable=self.conArtist)
@@ -193,6 +207,7 @@ class UI:
         self.conArtistEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.conArtistEntry))
         self.conArtistEntry.bind("<FocusOut>",
                                  lambda event: self.on_focus_out(event, self.conArtistEntry, self.conArtistPlaceHolder))
+        self.conArtistEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.conArtistEntry))
         self.conArtistEntry.grid(row=0, column=2, sticky='we', padx=(2, 5))
 
         self.albumNameEntry = ttk.Entry(self.musicSettings, foreground="grey", textvariable=self.albumName)
@@ -201,6 +216,7 @@ class UI:
         self.albumNameEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.albumNameEntry))
         self.albumNameEntry.bind("<FocusOut>",
                                  lambda event: self.on_focus_out(event, self.albumNameEntry, self.albumPlaceHolder))
+        self.albumNameEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.albumNameEntry))
         self.albumNameEntry.grid(row=1, column=0, sticky='we', padx=(2, 5))
 
         self.yearEntry = ttk.Entry(self.musicSettings, foreground="grey", textvariable=self.year)
@@ -208,6 +224,7 @@ class UI:
         self.yearEntry.insert(0, self.yearPlaceHolder)
         self.yearEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.yearEntry))
         self.yearEntry.bind("<FocusOut>", lambda event: self.on_focus_out(event, self.yearEntry, self.yearPlaceHolder))
+        self.yearEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.yearEntry))
         self.yearEntry.grid(row=1, column=1, sticky='we', padx=(2, 5))
 
         self.genreCB = ttk.Combobox(self.musicSettings,
@@ -217,6 +234,7 @@ class UI:
         self.genreCB.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.genreCB))
         self.genreCB.bind("<FocusOut>",
                           lambda event: self.on_focus_out(event, self.genreCB, self.genrePlaceHolder))
+        self.genreCB.bind("<Button-3>", lambda event: self.pop_menu(event, self.genreCB))
         self.genreCB.grid(row=1, column=2, sticky='we', padx=(2, 5))
 
         self.saveSettingsButton = ttk.Button(self.musicSettings, text="Save Settings", bootstyle="secondary")
@@ -287,6 +305,7 @@ class UI:
             self.songDetailNameEntry.bind("<FocusOut>",
                                           lambda event: self.on_focus_out(event, self.songDetailNameEntry,
                                                                           self.songPlaceHolder))
+            self.songDetailNameEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.songDetailNameEntry))
             self.songDetailNameEntry.grid(row=0, column=0, sticky='we', padx=(2, 5))
 
             self.artistDetailNameEntry = ttk.Entry(self.editorLF, foreground="grey", textvariable=self.artistDetailName)
@@ -296,6 +315,8 @@ class UI:
             self.artistDetailNameEntry.bind("<FocusOut>",
                                             lambda event: self.on_focus_out(event, self.artistDetailNameEntry,
                                                                             self.artistPlaceHolder))
+            self.artistDetailNameEntry.bind("<Button-3>",
+                                            lambda event: self.pop_menu(event, self.artistDetailNameEntry))
             self.artistDetailNameEntry.grid(row=0, column=1, sticky='we', padx=(2, 5))
 
             self.conDetailArtistEntry = ttk.Entry(self.editorLF, foreground="grey", textvariable=self.conDetailArtist)
@@ -305,6 +326,8 @@ class UI:
             self.conDetailArtistEntry.bind("<FocusOut>",
                                            lambda event: self.on_focus_out(event, self.conDetailArtistEntry,
                                                                            self.conArtistPlaceHolder))
+            self.conDetailArtistEntry.bind("<Button-3>",
+                                           lambda event: self.pop_menu(event, self.conDetailArtistEntry))
             self.conDetailArtistEntry.grid(row=0, column=2, sticky='we', padx=(2, 5))
 
             self.albumDetailNameEntry = ttk.Entry(self.editorLF, foreground="grey", textvariable=self.albumDetailName)
@@ -314,6 +337,8 @@ class UI:
             self.albumDetailNameEntry.bind("<FocusOut>",
                                            lambda event: self.on_focus_out(event, self.albumDetailNameEntry,
                                                                            self.albumPlaceHolder))
+            self.albumDetailNameEntry.bind("<Button-3>",
+                                           lambda event: self.pop_menu(event, self.albumDetailNameEntry))
             self.albumDetailNameEntry.grid(row=1, column=0, sticky='we', padx=(2, 5))
 
             self.yearDetailEntry = ttk.Entry(self.editorLF, foreground="grey", textvariable=self.yearDetail)
@@ -322,6 +347,7 @@ class UI:
             self.yearDetailEntry.bind("<FocusOut>",
                                       lambda event: self.on_focus_out(event, self.yearDetailEntry,
                                                                       self.yearPlaceHolder))
+            self.yearDetailEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.yearDetailEntry))
             self.yearDetailEntry.grid(row=1, column=1, sticky='we', padx=(2, 5))
 
             self.genreDetailCB = ttk.Combobox(self.editorLF,
@@ -331,6 +357,7 @@ class UI:
             self.genreDetailCB.bind("<FocusOut>",
                                     lambda event: self.on_focus_out(event, self.genreDetailCB,
                                                                     self.genrePlaceHolder))
+            self.genreDetailCB.bind("<Button-3>", lambda event: self.pop_menu(event, self.genreDetailCB))
             self.genreDetailCB.grid(row=1, column=2, sticky='we', padx=(2, 5))
 
             self.saveDetailSettingsButton = ttk.Button(self.editorLF, text="Save Settings", bootstyle="secondary")
@@ -398,7 +425,7 @@ class UI:
         self.downloadEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.downloadEntry))
         self.downloadEntry.bind("<FocusOut>",
                                 lambda event: self.on_focus_out(event, self.downloadEntry, "Enter URL"))
-        self.downloadEntry.bind("<Button-3>", self.pop_menu)
+        self.downloadEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.downloadEntry))
         self.downloadEntry.grid(row=1, column=0, columnspan=3, sticky='we', padx=3)
 
         self.downloadButton = ttk.Button(self.downloadSettings, text="Download", bootstyle="secondary")
