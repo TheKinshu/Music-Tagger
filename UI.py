@@ -122,13 +122,22 @@ class UI:
 
     def copy_text(self, entry):
         entry.clipboard_clear()
-        entry.clipboard_append(entry.get())
+        if isinstance(entry, ttk.Entry):
+            entry.clipboard_append(entry.get())
+        else:
+            # if its a text box
+            entry.clipboard_append(entry.get(1.0, tk.END))
 
     def paste_text(self,  entry):
         content = entry.clipboard_get()
         if content:
-            entry.delete(0, tk.END)
-            entry.insert(0, entry.clipboard_get())
+            if isinstance(entry, ttk.Entry):
+                entry.delete(0, tk.END)
+                entry.insert(0, content)
+            else:
+                # if its a text box
+                entry.delete(1.0, tk.END)
+                entry.insert(tk.END, content)
 
 
     def pop_menu(self, event, entry):
@@ -278,6 +287,7 @@ class UI:
             self.lyricsText = tk.Text(self.lyricsLabel)
             self.lyricsText.grid(row=0, column=0, sticky='nesw')
             self.lyricsText.insert(tk.END, "Lyrics")
+            self.lyricsText.bind("<Button-3>", lambda event: self.pop_menu(event, self.lyricsText))
             self.lyricsLabel.place(relx=0.53, rely=0.03, relwidth=0.47, relheight=0.59)
 
             self.infoFrame.pack(expand=True, fill='both', pady=(20, 0), padx=30)
