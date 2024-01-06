@@ -15,6 +15,12 @@ def check_for_folders(logger):
             logger.info("Video folder not found")
             logger.info("Creating Video folder")
             os.mkdir("Video")
+        # Create tmp cache folder
+        if not os.path.exists("tmp"):
+            logger.info("tmp folder not found")
+            logger.info("Creating tmp folder")
+            os.mkdir("tmp")
+
     except Exception as e:
         logger.error("Error creating Downloads folder")
         logger.error(e)
@@ -50,9 +56,10 @@ class Client:
         try:
             settings = UI(self.logger, self.settings)
 
+            # Change this to clear cache folder
             if settings.currentDelete:
-                self.logger.info("Deleting mp4 file")
-                folder_path = './Video'
+                self.logger.info("Deleting mp4 cache file")
+                folder_path = './tmp'
 
                 # Use glob to get a list of all MP4 files in the folder
                 mp4_files = glob.glob(os.path.join(folder_path, '*.mp4'))
@@ -61,10 +68,10 @@ class Client:
                 for mp4_file in mp4_files:
                     try:
                         os.remove(mp4_file)
-                        print(f"Deleted: {mp4_file}")
+                        print(f"Deleted cache: {mp4_file}")
                     except OSError as e:
                         print(f"Error deleting {mp4_file}: {e}")
-                self.logger.info("Deleting mp4 file complete")
+                self.logger.info("All cache files deleted")
 
 
             return self.protocol[0]

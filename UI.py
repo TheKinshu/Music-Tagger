@@ -428,6 +428,13 @@ class UI:
         ToolTip(self.songRadio, "Download a single song")
         self.songRadio.grid(row=0, column=0, sticky='e')
 
+        # Checkbox for video only
+        self.videoOnly = tk.BooleanVar()
+
+        self.videoOnlyCB = ttk.Checkbutton(self.downloadSettings, text="Video Only", variable=self.videoOnly)
+        ToolTip(self.videoOnlyCB, "Download the video only")
+        self.videoOnlyCB.grid(row=0, column=2,)
+
         self.urlLink = tk.StringVar()
         self.downloadEntry = ttk.Entry(self.downloadSettings, foreground="grey", textvariable=self.urlLink)
         self.downloadEntryPlaceholder = "Enter URL"
@@ -469,7 +476,8 @@ class UI:
         # Set to see if the user wants to delete the song after downloading
         self.deleteSong = tk.BooleanVar()
         self.deleteSong.set(self.currentDelete)
-        self.deleteSongCB = ttk.Checkbutton(self.downloadSettingsFrame, text="Delete Video After Download is completed",
+        self.deleteSongCB = ttk.Checkbutton(self.downloadSettingsFrame, text="Delete Video in cache file after "
+                                                                             "download is completed",
                                             variable=self.deleteSong)
         self.deleteSongCB.grid(row=0, column=0, sticky='e')
 
@@ -526,23 +534,25 @@ class UI:
             self.panel1.insert("", "end", text=song.replace(".mp3", ""))
 
     def downloadMusic(self, event):
+        # Get if its video only
+        video_only = self.videoOnly.get()
+
+        download_path = "tmp"
+        if video_only:
+            download_path = "Video"
+
         if self.downloadState.get() == 1:
             self.logger.info("Downloading song")
 
-            downloader = self.musicDownloader.downloader(str(self.urlLink.get()), "Video", self.qualityCheck.get(),
-                                                         self.logger, self.setProgress, self.window)
+            downloader = self.musicDownloader.downloader(str(self.urlLink.get()), download_path, self.qualityCheck.get(),
+                                                         self.logger, self.setProgress, self.window, video_only)
 
             downloader.single_download()
-
-            # Use threading to wait for completion
-
             self.urlLink.set("")
-
-
         elif self.downloadState.get() == 2:
             self.logger.info("Downloading playlist")
-            self.musicDownloader.downloader(str(self.urlLink.get()), "Video", self.qualityCheck.get(), self.logger,
-                                            self.setProgress, self.window).playlist_download()
+            self.musicDownloader.downloader(str(self.urlLink.get()), download_path, self.qualityCheck.get(), self.logger,
+                                            self.setProgress, self.window, video_only).playlist_download()
             # Delete URL
             self.urlLink.set("")
 
