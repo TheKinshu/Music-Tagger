@@ -1,3 +1,8 @@
+import threading
+
+from PIL import Image
+
+Image.CUBIC = Image.BICUBIC
 import tkinter as tk
 import ttkbootstrap as ttk
 from tktooltip import ToolTip
@@ -51,7 +56,6 @@ def check_for_lyrics(logger, song, artist):
 
 class UI:
     def __init__(self, logger, settings=None) -> None:
-
         self.themeSettings = None
         self.logger = logger
         self.settings = settings
@@ -89,6 +93,12 @@ class UI:
         self.window.title("Welcome to Music Download/Tagger 2.0")
         self.window.geometry(self.SIZE)
 
+        self.menu_option = ttk.Menu(self.window)
+        # Copying copy hovered entry
+        self.menu_option.add_command(label="Copy")
+        # Pasting Link
+        self.menu_option.add_command(label="Paste")
+
         self.logger = logger
         self.logger.info("Creating UI")
 
@@ -109,6 +119,31 @@ class UI:
 
         self.notebook.pack(expand=True, fill='both')
         self.window.mainloop()
+
+    def copy_text(self, entry):
+        entry.clipboard_clear()
+        if isinstance(entry, ttk.Entry):
+            entry.clipboard_append(entry.get())
+        else:
+            # if its a text box
+            entry.clipboard_append(entry.get(1.0, tk.END))
+
+    def paste_text(self,  entry):
+        content = entry.clipboard_get()
+        if content:
+            if isinstance(entry, ttk.Entry):
+                entry.delete(0, tk.END)
+                entry.insert(0, content)
+            else:
+                # if its a text box
+                entry.delete(1.0, tk.END)
+                entry.insert(tk.END, content)
+
+
+    def pop_menu(self, event, entry):
+        self.menu_option.tk_popup(event.x_root, event.y_root)
+        self.menu_option.entryconfigure("Copy", command=lambda: self.copy_text(entry))
+        self.menu_option.entryconfigure("Paste", command=lambda: self.paste_text(entry))
 
     def create_page1(self):
         self.page1 = ttk.Frame(self.notebook)
@@ -160,6 +195,7 @@ class UI:
         self.songNameEntry = ttk.Entry(self.musicSettings, foreground="grey", textvariable=self.songName)
         self.songPlaceHolder = "Song Name"
         self.songNameEntry.insert(0, self.songPlaceHolder)
+        self.songNameEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.songNameEntry))
         self.songNameEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.songNameEntry))
         self.songNameEntry.bind("<FocusOut>",
                                 lambda event: self.on_focus_out(event, self.songNameEntry, self.songPlaceHolder))
@@ -171,6 +207,7 @@ class UI:
         self.artistNameEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.artistNameEntry))
         self.artistNameEntry.bind("<FocusOut>",
                                   lambda event: self.on_focus_out(event, self.artistNameEntry, self.artistPlaceHolder))
+        self.artistNameEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.artistNameEntry))
         self.artistNameEntry.grid(row=0, column=1, sticky='we', padx=(2, 5))
 
         self.conArtistEntry = ttk.Entry(self.musicSettings, foreground="grey", textvariable=self.conArtist)
@@ -179,6 +216,7 @@ class UI:
         self.conArtistEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.conArtistEntry))
         self.conArtistEntry.bind("<FocusOut>",
                                  lambda event: self.on_focus_out(event, self.conArtistEntry, self.conArtistPlaceHolder))
+        self.conArtistEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.conArtistEntry))
         self.conArtistEntry.grid(row=0, column=2, sticky='we', padx=(2, 5))
 
         self.albumNameEntry = ttk.Entry(self.musicSettings, foreground="grey", textvariable=self.albumName)
@@ -187,6 +225,7 @@ class UI:
         self.albumNameEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.albumNameEntry))
         self.albumNameEntry.bind("<FocusOut>",
                                  lambda event: self.on_focus_out(event, self.albumNameEntry, self.albumPlaceHolder))
+        self.albumNameEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.albumNameEntry))
         self.albumNameEntry.grid(row=1, column=0, sticky='we', padx=(2, 5))
 
         self.yearEntry = ttk.Entry(self.musicSettings, foreground="grey", textvariable=self.year)
@@ -194,6 +233,7 @@ class UI:
         self.yearEntry.insert(0, self.yearPlaceHolder)
         self.yearEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.yearEntry))
         self.yearEntry.bind("<FocusOut>", lambda event: self.on_focus_out(event, self.yearEntry, self.yearPlaceHolder))
+        self.yearEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.yearEntry))
         self.yearEntry.grid(row=1, column=1, sticky='we', padx=(2, 5))
 
         self.genreCB = ttk.Combobox(self.musicSettings,
@@ -203,6 +243,7 @@ class UI:
         self.genreCB.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.genreCB))
         self.genreCB.bind("<FocusOut>",
                           lambda event: self.on_focus_out(event, self.genreCB, self.genrePlaceHolder))
+        self.genreCB.bind("<Button-3>", lambda event: self.pop_menu(event, self.genreCB))
         self.genreCB.grid(row=1, column=2, sticky='we', padx=(2, 5))
 
         self.saveSettingsButton = ttk.Button(self.musicSettings, text="Save Settings", bootstyle="secondary")
@@ -216,10 +257,7 @@ class UI:
 
     def force_update(self, event):
         # refresh the music library
-        self.panel1.delete(*self.panel1.get_children())
-        self.songs = check_for_songs(self.logger)
-        for song in self.songs:
-            self.panel1.insert("", "end", text=song.replace(".mp3", ""))
+        self.setLibrary()
 
     def detail_edit(self, event):
         if self.currentSelectedSong is not None:
@@ -249,6 +287,7 @@ class UI:
             self.lyricsText = tk.Text(self.lyricsLabel)
             self.lyricsText.grid(row=0, column=0, sticky='nesw')
             self.lyricsText.insert(tk.END, "Lyrics")
+            self.lyricsText.bind("<Button-3>", lambda event: self.pop_menu(event, self.lyricsText))
             self.lyricsLabel.place(relx=0.53, rely=0.03, relwidth=0.47, relheight=0.59)
 
             self.infoFrame.pack(expand=True, fill='both', pady=(20, 0), padx=30)
@@ -276,6 +315,7 @@ class UI:
             self.songDetailNameEntry.bind("<FocusOut>",
                                           lambda event: self.on_focus_out(event, self.songDetailNameEntry,
                                                                           self.songPlaceHolder))
+            self.songDetailNameEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.songDetailNameEntry))
             self.songDetailNameEntry.grid(row=0, column=0, sticky='we', padx=(2, 5))
 
             self.artistDetailNameEntry = ttk.Entry(self.editorLF, foreground="grey", textvariable=self.artistDetailName)
@@ -285,6 +325,8 @@ class UI:
             self.artistDetailNameEntry.bind("<FocusOut>",
                                             lambda event: self.on_focus_out(event, self.artistDetailNameEntry,
                                                                             self.artistPlaceHolder))
+            self.artistDetailNameEntry.bind("<Button-3>",
+                                            lambda event: self.pop_menu(event, self.artistDetailNameEntry))
             self.artistDetailNameEntry.grid(row=0, column=1, sticky='we', padx=(2, 5))
 
             self.conDetailArtistEntry = ttk.Entry(self.editorLF, foreground="grey", textvariable=self.conDetailArtist)
@@ -294,6 +336,8 @@ class UI:
             self.conDetailArtistEntry.bind("<FocusOut>",
                                            lambda event: self.on_focus_out(event, self.conDetailArtistEntry,
                                                                            self.conArtistPlaceHolder))
+            self.conDetailArtistEntry.bind("<Button-3>",
+                                           lambda event: self.pop_menu(event, self.conDetailArtistEntry))
             self.conDetailArtistEntry.grid(row=0, column=2, sticky='we', padx=(2, 5))
 
             self.albumDetailNameEntry = ttk.Entry(self.editorLF, foreground="grey", textvariable=self.albumDetailName)
@@ -303,6 +347,8 @@ class UI:
             self.albumDetailNameEntry.bind("<FocusOut>",
                                            lambda event: self.on_focus_out(event, self.albumDetailNameEntry,
                                                                            self.albumPlaceHolder))
+            self.albumDetailNameEntry.bind("<Button-3>",
+                                           lambda event: self.pop_menu(event, self.albumDetailNameEntry))
             self.albumDetailNameEntry.grid(row=1, column=0, sticky='we', padx=(2, 5))
 
             self.yearDetailEntry = ttk.Entry(self.editorLF, foreground="grey", textvariable=self.yearDetail)
@@ -311,6 +357,7 @@ class UI:
             self.yearDetailEntry.bind("<FocusOut>",
                                       lambda event: self.on_focus_out(event, self.yearDetailEntry,
                                                                       self.yearPlaceHolder))
+            self.yearDetailEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.yearDetailEntry))
             self.yearDetailEntry.grid(row=1, column=1, sticky='we', padx=(2, 5))
 
             self.genreDetailCB = ttk.Combobox(self.editorLF,
@@ -320,6 +367,7 @@ class UI:
             self.genreDetailCB.bind("<FocusOut>",
                                     lambda event: self.on_focus_out(event, self.genreDetailCB,
                                                                     self.genrePlaceHolder))
+            self.genreDetailCB.bind("<Button-3>", lambda event: self.pop_menu(event, self.genreDetailCB))
             self.genreDetailCB.grid(row=1, column=2, sticky='we', padx=(2, 5))
 
             self.saveDetailSettingsButton = ttk.Button(self.editorLF, text="Save Settings", bootstyle="secondary")
@@ -387,6 +435,7 @@ class UI:
         self.downloadEntry.bind("<FocusIn>", lambda event: self.on_focus_in(event, self.downloadEntry))
         self.downloadEntry.bind("<FocusOut>",
                                 lambda event: self.on_focus_out(event, self.downloadEntry, "Enter URL"))
+        self.downloadEntry.bind("<Button-3>", lambda event: self.pop_menu(event, self.downloadEntry))
         self.downloadEntry.grid(row=1, column=0, columnspan=3, sticky='we', padx=3)
 
         self.downloadButton = ttk.Button(self.downloadSettings, text="Download", bootstyle="secondary")
@@ -396,7 +445,7 @@ class UI:
         self.downloadArea = ttk.Labelframe(self.page2, text="Download Area")
         self.downloadArea.place(relx=0.05, rely=0.4, relwidth=0.9, relheight=0.5)
 
-        self.processingLabel = ttk.Label(self.downloadArea, text="Currently Downloading:\t\t\tNone")
+        self.processingLabel = ttk.Label(self.downloadArea, text="Currently Downloading:\tNone")
         self.processingLabel.place(relx=0.05, rely=0.1)
 
         self.progress = ttk.Meter(self.downloadArea, subtext="Download Progress", textright="%", stripethickness=10, )
@@ -420,7 +469,7 @@ class UI:
         # Set to see if the user wants to delete the song after downloading
         self.deleteSong = tk.BooleanVar()
         self.deleteSong.set(self.currentDelete)
-        self.deleteSongCB = ttk.Checkbutton(self.downloadSettingsFrame, text="Delete Song After Download",
+        self.deleteSongCB = ttk.Checkbutton(self.downloadSettingsFrame, text="Delete Video After Download is completed",
                                             variable=self.deleteSong)
         self.deleteSongCB.grid(row=0, column=0, sticky='e')
 
@@ -429,7 +478,7 @@ class UI:
         self.qualityCheckLabel.grid(row=1, column=0, sticky='')
         self.qualityCheck = tk.StringVar()
         self.qualityCheck.set(self.currentQuality)
-        self.qualityCheckCB = ttk.Combobox(self.downloadSettingsFrame, values=["360p", '480p'], state="readonly",
+        self.qualityCheckCB = ttk.Combobox(self.downloadSettingsFrame, values=["360p", "480p"], state="readonly",
                                            textvariable=self.qualityCheck, bootstyle="light")
         self.qualityCheckCB.grid(row=1, column=1, )
 
@@ -463,9 +512,18 @@ class UI:
         # change theme
         self.window.style.theme_use(self.themeSettings.get())
 
-    def setProgress(self, title, progress):
-        self.processingLabel.config(text=f"Currently Downloading:\t\t\t{title}")
+    def setProgress(self, title, progress, complete):
+        self.processingLabel.config(text=f"Currently Downloading:\t{title}")
         self.progress["amountused"] = round(progress * 100, 2)
+
+        if complete:
+            self.setLibrary()
+
+    def setLibrary(self):
+        self.songs = check_for_songs(self.logger)
+        self.panel1.delete(*self.panel1.get_children())
+        for song in self.songs:
+            self.panel1.insert("", "end", text=song.replace(".mp3", ""))
 
     def downloadMusic(self, event):
         if self.downloadState.get() == 1:
@@ -476,10 +534,17 @@ class UI:
 
             downloader.single_download()
 
+            # Use threading to wait for completion
+
+            self.urlLink.set("")
+
+
         elif self.downloadState.get() == 2:
             self.logger.info("Downloading playlist")
             self.musicDownloader.downloader(str(self.urlLink.get()), "Video", self.qualityCheck.get(), self.logger,
                                             self.setProgress, self.window).playlist_download()
+            # Delete URL
+            self.urlLink.set("")
 
     def get_songs(self, event):
         # reset the entry boxes with placeholders
@@ -508,7 +573,6 @@ class UI:
             set_if_not_none('album', self.albumName)
             set_if_not_none('recording_date', self.year)
             set_if_not_none('genre', self.genre)
-
 
     def get_song_tags(self, event):
         try:
@@ -581,26 +645,10 @@ class UI:
             set_tag_if_not_empty('recording_date', self.year.get(), self.yearPlaceHolder)
             set_tag_if_not_empty('genre', self.genre.get(), self.genrePlaceHolder)
 
-            # Only add the specific tags if the entry is not empty
-            # if self.songName.get() != self.songPlaceHolder:
-            #     audioFile.tag.title = self.songName.get()
-            # if self.artistName.get() != self.artistPlaceHolder:
-            #     audioFile.tag.artist = self.artistName.get()
-            # if self.conArtist.get() != self.conArtistPlaceHolder:
-            #     audioFile.tag.album_artist = self.conArtist.get()
-            # if self.albumName.get() != self.albumPlaceHolder:
-            #     audioFile.tag.album = self.albumName.get()
-            # if self.year.get() != self.yearPlaceHolder:
-            #     audioFile.tag.recording_date = self.year.get()
-            # if self.genre.get() != self.genrePlaceHolder:
-            #     audioFile.tag.genre = self.genre.get()
             audioFile.tag.save()
 
             # reset panel and get new songs
-            self.panel1.delete(*self.panel1.get_children())
-            self.songs = check_for_songs(self.logger)
-            for song in self.songs:
-                self.panel1.insert("", "end", text=song.replace(".mp3", ""))
+            self.setLibrary()
 
             self.currentSelectedSong = None
 

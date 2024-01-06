@@ -6,6 +6,11 @@ from converter import Converter
 import logging
 
 
+def show_progress_bar(s, chunk, bytes_remaining, logger):
+    download_percent = int((s.filesize - bytes_remaining) / s.filesize * 100)
+    logger.info(f'\rCurrent Download Progress: {download_percent} %')
+
+
 # Download youtube video
 class downloader:
     def __init__(self, url, path, resolution, logger=None, currentDownload=None, window=None):
@@ -28,10 +33,15 @@ class downloader:
 
     def download_video(self, video_url, index, total_videos):
         try:
+
             self.video = YouTube(video_url)
             self.title = self.video.title
 
+            self.video.register_on_progress_callback(
+                lambda s, chunk, bytes_remaining: show_progress_bar(s, chunk, bytes_remaining, self.logger))
+
             self.window.update_idletasks()
+
             self.video.streams.filter(progressive=True, file_extension='mp4', resolution=self.resolution).order_by(
                 'resolution').desc().first().download(output_path=self.path)
 
@@ -42,15 +52,17 @@ class downloader:
                 for i in self.regex:
                     if i in self.title:
                         self.title = self.title.replace(i, "")
+                self.currentDownload(self.title, round(index-1 / total_videos, 2), False)
 
-                self.currentDownload(self.title, round(index/total_videos, 2))
-                Converter("./Video", self.title).convert()
+                Converter("./Video", self.title, self.logger).convert()
+                self.currentDownload(self.title, round(index / total_videos, 2), True)
+
             except Exception as e:
                 self.logger.error("Error converting file: " + str(e))
 
-
         except Exception as e:
-            self.logger.error("Error downloading video:" + str(e))
+            errorMessage = "Error downloading video:" + str(e) + "\nAttempted to download: " + self.title + "\nLink: " + video_url
+            self.logger.error(errorMessage)
             return False
 
     def download_async(self, url):
