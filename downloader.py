@@ -13,7 +13,7 @@ def show_progress_bar(s, chunk, bytes_remaining, logger):
 
 # Download youtube video
 class downloader:
-    def __init__(self, url, path, resolution, logger=None, currentDownload=None, window=None):
+    def __init__(self, url, path, resolution, logger=None, currentDownload=None, window=None, video_only=False):
         self.window = window
         self.url = url
         self.path = path
@@ -21,6 +21,7 @@ class downloader:
         self.logger = logger
         self.currentDownload = currentDownload
         self.title = None
+        self.video_only = video_only
         self.playlist = None
         self.regex = ['/', '\\', '?', '<', '>', '?', '*', '"', '|', ':', '.', ',', "'", '#', '$', ';']
 
@@ -54,7 +55,8 @@ class downloader:
                         self.title = self.title.replace(i, "")
                 self.currentDownload(self.title, round(index-1 / total_videos, 2), False)
 
-                Converter("./Video", self.title, self.logger).convert()
+                if not self.video_only:
+                    Converter("./tmp", self.title, self.logger).convert()
                 self.currentDownload(self.title, round(index / total_videos, 2), True)
 
             except Exception as e:
