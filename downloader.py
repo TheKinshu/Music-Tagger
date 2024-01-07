@@ -53,11 +53,13 @@ class downloader:
                 for i in self.regex:
                     if i in self.title:
                         self.title = self.title.replace(i, "")
-                self.currentDownload(self.title, round(index-1 / total_videos, 2), False)
+                percentage = round(index-1 / total_videos, 2)
+                self.currentDownload(self.title, percentage, False)
 
                 if not self.video_only:
                     Converter("./tmp", self.title, self.logger).convert()
-                self.currentDownload(self.title, round(index / total_videos, 2), True)
+                percentage = round(index / total_videos, 2)
+                self.currentDownload(self.title, percentage, True)
 
             except Exception as e:
                 self.logger.error("Error converting file: " + str(e))

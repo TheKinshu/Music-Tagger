@@ -10,3 +10,7 @@ __pycache__
 dist/
 build/
 *.spec
+tmp/
+.cache
+Video/
+*.zip
