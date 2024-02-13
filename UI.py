@@ -97,6 +97,8 @@ class UI:
         # Pasting Link
         self.menu_option.add_command(label="Paste")
 
+        self.create_menu()
+
         self.logger = logger
         self.logger.info("Creating UI")
 
@@ -117,6 +119,18 @@ class UI:
 
         self.notebook.pack(expand=True, fill='both')
         self.window.mainloop()
+
+    def create_menu(self):
+        self.menu = tk.Menu(self.window)
+        self.window.config(menu=self.menu)
+
+        self.fileMenu = tk.Menu(self.menu, tearoff=0)
+        self.menu.add_cascade(label="File", menu=self.fileMenu)
+        self.fileMenu.add_command(label="Open Music Folder", command=lambda: os.startfile("Downloads"))
+        self.fileMenu.add_command(label="Open Video Folder", command=lambda: os.startfile("Video"))
+        self.fileMenu.add_separator()
+        self.fileMenu.add_command(label="Exit", command=self.window.quit)
+
 
     def copy_text(self, entry):
         entry.clipboard_clear()
