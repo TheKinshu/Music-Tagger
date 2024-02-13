@@ -86,12 +86,10 @@ class UI:
 
         self.window = ttk.Window(themename=self.currentTheme)
         self.window.iconbitmap("doro.ico")
-        self.SIZE = "600x620"
+        self.check_monitor_resolution()
 
-        self.window.minsize(600, 620)
 
         self.window.title("Welcome to Music Download/Tagger 2.0")
-        self.window.geometry(self.SIZE)
 
         self.menu_option = ttk.Menu(self.window)
         # Copying copy hovered entry
@@ -127,6 +125,27 @@ class UI:
         else:
             # if its a text box
             entry.clipboard_append(entry.get(1.0, tk.END))
+
+    def check_monitor_resolution(self):
+        # Get the screen resolution
+        width = self.window.winfo_screenwidth()
+        height = self.window.winfo_screenheight()
+        self.logger.info(f"Screen Resolution: {width}x{height}")
+        self.window.minsize(600, 620)
+
+        # Check if the resolution is greater than 1920x1080
+        if width > 1920 and height > 1080:
+            self.logger.info("Resolution is greater than 1920x1080")
+            self.SIZE = "1200x720"
+            self.window.geometry(self.SIZE)
+        elif width == 2560 and height == 1440:
+            self.logger.info("Resolution is 2560x1440")
+            self.SIZE = "1920x1080"
+            self.window.geometry(self.SIZE)
+        else:
+            self.logger.info("Resolution is less than 1920x1080")
+            self.SIZE = "600x620"
+            self.window.geometry(self.SIZE)
 
     def paste_text(self,  entry):
         content = entry.clipboard_get()
