@@ -1,0 +1,30 @@
+[project]
+name = "music-tagger"
+version = "1.0.0"
+description = ""
+authors = [
+    {name = "Kelvin Cho",email = "kc007919@gmail.com"}
+]
+readme = "README.md"
+requires-python = "3.12.4"
+dependencies = [
+    "tkinter-tooltip (>=3.1.2,<4.0.0)",
+    "ttkbootstrap (>=1.10.1,<2.0.0)",
+    "moviepy (>=2.1.2,<3.0.0)",
+    "spotipy (>=2.25.0,<3.0.0)",
+    "eyed3 (>=0.9.7,<0.10.0)",
+    "azlyrics (>=1.3.2,<2.0.0)",
+    "fastapi (>=0.115.8,<0.116.0)",
+    "structlog (>=25.1.0,<26.0.0)",
+    "asgi-correlation-id (>=4.3.4,<5.0.0)",
+    "pyyaml (>=6.0.2,<7.0.0)",
+    "uvicorn (>=0.34.0,<0.35.0)",
+    "pydantic-settings (>=2.7.1,<3.0.0)",
+    "pytube (>=15.0.0,<16.0.0)",
+    "certifi (>=2025.1.31,<2026.0.0)",
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
