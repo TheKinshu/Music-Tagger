@@ -2,7 +2,9 @@ from enum import Enum
 from typing import Optional, Union, Literal
 
 from pydantic import BaseModel, ConfigDict
+from structlog import get_logger
 
+logger = get_logger()
 
 class StrictBaseModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -45,3 +47,12 @@ class WSMessage(StrictBaseModel):
 
 class HealthStatus(StrictBaseModel):
     status: bool
+
+
+class YTDLPLogger:
+    def debug(self, msg):
+        logger.debug(msg)
+    def warning(self, msg):
+        logger.warning(msg)
+    def error(self, msg):
+        logger.error(msg)

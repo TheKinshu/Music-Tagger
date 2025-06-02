@@ -13,6 +13,7 @@ from starlette.responses import JSONResponse, RedirectResponse
 from structlog import get_logger
 
 from backend.app.api.v1.endpoints.music.router import router as music_router
+from backend.app.api.v1.endpoints.tagger.router import router as tagger_router
 from backend.app.common.models import ErrorEnum, ErrorResponseModel, HealthStatus, WSMessage, WSMessagePayloadLog, \
     WSMessagePayloadDownload, WSMessagePayloadProcess
 
@@ -114,7 +115,8 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
     except Exception as e:
         await websocket.app.state.ws_manager.send_log(user_id, f'[error]: {str(e)}')
 
-app.include_router(music_router, prefix="/api/v1/toolbox", tags=["toolbox"])
+app.include_router(music_router, prefix="/api/v1/music", tags=["music"])
+app.include_router(tagger_router, prefix="/api/v1/tagger", tags=["tagger"])
 
 
 def custom_openapi():

@@ -1,0 +1,9 @@
+music-tagger-app:
+  name: "Music Tagger application"
+  description: "Music Tagger application"
+  version: "1.0.0"
+
+settings:
+  - download-path: "./downloads"
+
+    
